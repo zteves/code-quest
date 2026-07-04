@@ -105,6 +105,15 @@ all learner-facing code.
 - Playground code auto-saves (debounced) per topic.
 - From Level 2 on, the sandbox also exposes the **sprite helper** (`drawSprite`) and a
   shared color palette so learners can draw the pixel-art characters (see `template/sprites.md`).
+- **Workshop must be big and stable (learned in L1/L2).** The editor and output panels are
+  tall (≥ 500px), the game canvas is displayed large enough to read, the output panel scrolls
+  on its own, and **arrow keys / space never scroll the sandbox** while playing (the sandbox
+  intercepts them with `preventDefault`). A game that scrolls out of view while you press keys
+  is a broken game.
+- **Canvas default background must be dark and neutral (learned in L2).** The sandbox canvas
+  starts on a dark background (not grass green), so any sprite is visible even before an
+  exercise paints its own background. Never leave the default canvas the same hue as the
+  sprites drawn on it.
 
 ---
 
@@ -120,6 +129,21 @@ Level 1's single-square hero was intentionally minimal. From Level 2 on, charact
 - All sprites are **canvas-drawn from data** — no image files, still one offline file.
 - Tiles get more detail than L1 (textured grass, trees, stone walls, doors, stairs).
 - Keep contrast high and shapes readable at the chosen `SPRITE_SCALE`.
+
+### Sprite contrast (hard rule — learned in L2)
+
+The single biggest visual bug in early L2 was **green sprites disappearing on green grass.**
+To prevent it:
+
+- **Every character sprite has a dark outline** (`k`) around its silhouette, so it reads
+  against any tile — including a same-hue background. A mono-color sprite with no outline is
+  banned.
+- **A sprite's body color must differ from the tile it usually stands on.** A green slime on
+  green grass only works *because* of its outline; don't rely on hue alone.
+- **Teaching demos that exist just to show a sprite** paint a **contrasting background**
+  (dark slate or parchment), not grass, so the shape is unmistakable. Say so in the lesson.
+- Verify every sprite before shipping: **all rows equal length**, and **every character is a
+  key in `PALETTE`** (a stray letter draws nothing — an invisible pixel).
 
 The sprite-grid format and starter sprites live in `template/sprites.md`.
 
@@ -164,7 +188,59 @@ The sprite-grid format and starter sprites live in `template/sprites.md`.
 
 ---
 
-## 10. Build Workflow for a New Level
+## 10. Game Loop & Motion (hard rule — learned in L2)
+
+**All movement and timers must be time-based, never per-frame.** `requestAnimationFrame`
+does not run at a fixed 60fps — on 120Hz/144Hz and Mac ProMotion displays it runs faster
+(and Macs ramp the refresh rate up *while the user is actively pressing keys*, which made
+L2's enemies visibly "speed up" during play). Per-frame movement therefore runs 2× fast on
+those screens.
+
+- The game loop takes the timestamp `requestAnimationFrame` passes it and computes a
+  **`frameScale`** = time-since-last-frame ÷ (1000/60). It is `1` at 60fps, `0.5` at 120fps.
+- **Multiply every per-frame change by `frameScale`:** hero movement, enemy movement, wander,
+  and countdown timers (hurt cooldown, attack timer). Speed numbers stay written "per 60fps
+  frame," so they remain intuitive.
+- Because timers become fractional, compare them with `<= 0`, never `=== 0` (they may skip
+  the exact zero). Clamp `frameScale` to a small max (e.g. 4) so a paused/backgrounded tab
+  doesn't teleport everything on return.
+- Start the loop with `requestAnimationFrame(gameLoop)` so the first call gets a timestamp.
+
+This pattern is the default for every game loop in every level from L2 on.
+
+---
+
+## 11. Combat & Difficulty Tuning (learned in L2)
+
+Defaults that made L2 fair for a 10-year-old beginner. Treat as starting points, not law:
+
+- **Enemies move slowly** relative to the hero (hero clearly faster, so the player can kite).
+  L2 used enemy speed ~0.3 vs hero speed ~2 (per 60fps frame).
+- **Give each enemy its own path,** not a synchronized beeline: vary per-enemy speed and add a
+  small **random wander** so they don't converge as one wall.
+- **Small, fractional damage over one-shot damage.** L2 enemies deal **0.25 heart** per touch
+  with a ~1s hurt cooldown, so a bump is a setback, not a disaster. Fractional health is fine
+  (0.25 is exact in binary — no float drift; game-over at `<= 0`).
+- **Keep the enemy count low** enough to fight (L2: 3). More enemies × more damage overwhelms
+  fast; tune them together.
+
+---
+
+## 12. HUD Readability (learned in L2)
+
+If the player can't *see* a value change, they'll think the logic is broken (this happened
+with L2's quarter-hearts on tiny 16px squares).
+
+- **Make stat displays big enough to read the smallest change.** Quarter-heart steps need
+  hearts large enough that a quarter is obvious (L2 uses 26px hearts with a gold outline and a
+  bottom-up partial fill).
+- **Pair any fractional/graphical stat with a plain numeric readout** (e.g. `Health: 2.75`),
+  so the exact value is verifiable at a glance — for the player *and* for us during testing.
+- Draw the HUD **last**, on top of everything, so it's never hidden behind the world.
+
+---
+
+## 13. Build Workflow for a New Level
 
 1. Copy `template/base.html` → `levels/level-0X/index.html`.
 2. Fill in the `LEVEL` config (id, number, title, subtitle, certificate copy, save key).
@@ -183,4 +259,11 @@ The sprite-grid format and starter sprites live in `template/sprites.md`.
 - [ ] Playground runs sandboxed; friendly errors; exercises preload.
 - [ ] Reduced-motion respected; focus states visible; contrast ≥ 4.5:1.
 - [ ] Sound + mute work; certificate appears at 100%.
+- [ ] **Sprites:** every one has a dark outline, rows are equal length, and every character
+      is a `PALETTE` key; sprite bodies contrast with the tile they stand on (§6).
+- [ ] **Motion is time-based** (`frameScale`), timers compared with `<= 0`; verified constant
+      speed regardless of refresh rate (§10).
+- [ ] **HUD** is large enough to read the smallest stat change and has a numeric readout (§12);
+      arrow/space keys don't scroll the sandbox (§5).
+- [ ] Combat is fair: slow, varied enemies; small fractional damage; low count (§11).
 - [ ] Final project matches the level's game milestone and continues the shared game.

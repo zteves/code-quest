@@ -103,9 +103,35 @@ for a few frames after the attack key is pressed.
 - Use a consistent `SPRITE_SCALE` (constant, `UPPER_SNAKE_CASE`) per level, e.g. `4` or `6`.
 - Give each entity type its own named sprite constant: `heroSprites`, `slimeSprite`,
   `batSprite`, `skeletonSprite`, `bossSprite`, `chestClosedSprite`, `chestOpenSprite`.
-- Keep outlines (`k`) around characters so they read against any tile.
+- **Always wrap the silhouette in a dark outline (`k`)** so it reads against any tile —
+  including a same-hue one. This is a hard rule (see STANDARDS §6): the top L2 bug was a
+  green slime vanishing on green grass. A mono-color sprite with no outline is banned.
+- **A sprite's body color must differ from the tile it usually stands on.** The green slime
+  works on green grass only *because* of its outline — never rely on hue alone.
 - Keep grids small (roughly 8×8 to 16×16). Bigger sprites cost readability and clarity.
 - Enemies and hero share the same `PALETTE` so the world looks unified.
+- The sandbox canvas starts on a **dark** background so sprites are visible even before an
+  exercise paints a background. Sprite-only teaching demos should paint a contrasting
+  (dark or parchment) background, not grass.
+
+## Verify before shipping
+
+Every sprite: **all rows the same length**, and **every character is a key in `PALETTE`**
+(a stray letter = an invisible pixel). Check with a quick script, don't eyeball it.
+
+## Reference: the L2 outlined sprites
+
+These shipped in Level 2 — reuse and extend them so the series stays visually consistent.
+
+```js
+// Hero, 8 wide, black-outlined, one per facing
+const heroDown  = ["..kkkk..",".knnnnk.",".kssssk.",".kskksk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];
+const heroUp    = ["..kkkk..",".knnnnk.",".knnnnk.",".knnnnk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];
+const heroLeft  = ["..kkkk..",".knnnnk.","kkssssk.","kskssk..","kkssssk.","kgggggk.","kgggggk.",".kn.nk.."];
+const heroRight = ["..kkkk..",".knnnnk.",".ksssskk","..kssksk",".ksssskk",".kgggggk",".kgggggk","..kn.nk."];
+// Slime enemy, 8 wide, black-outlined green with black eyes
+const slimeSprite = ["..kkkk..",".kggggk.","kggggggk","kgkggkgk","kggggggk",".kkkkkk."];
+```
 
 ## Starter sprites (expand per level as needed)
 
