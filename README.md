@@ -16,7 +16,7 @@ Open any level's `index.html` in a browser. Progress saves automatically to that
 |---|---|---|---|
 | 1 | (JS Fundamentals) | variables → loops → functions → objects → events → canvas → game loop → collision | ✅ Shipped (`levels/level-01/`) |
 | 2 | The Monsters Awaken | sprites, enemies, combat, health & damage | ✅ Shipped (`levels/level-02/`) |
-| 3 | Treasure & Power | chests, items, inventory, XP & leveling | 🔜 Planned |
+| 3 | Treasure & Power | chests, items, inventory, XP & leveling | ✅ Shipped (`levels/level-03/`) |
 | 4 | Deeper into the Dungeon | multi-floor navigation | 🔜 Planned |
 | 5 | The Grand Quest | game states, boss, full multi-floor adventure | 🔜 Planned |
 
