@@ -114,6 +114,12 @@ all learner-facing code.
   starts on a dark background (not grass green), so any sprite is visible even before an
   exercise paints its own background. Never leave the default canvas the same hue as the
   sprites drawn on it.
+- **Never leave the game screen blank (hard rule — learned in L2).** Every exercise must
+  draw *something* to the canvas each run. A blank canvas reads as "broken" even when the
+  code ran perfectly — a console-only logic demo (e.g. a cooldown or hit-detection loop that
+  only `console.log`s) looks like a failure to a kid. Concept demos that compute a value must
+  also **render a simple live picture of what they compute** (draw the boxes, the hearts, the
+  flash, the hit). Verify by rendering the exercise, not just by reading its console output.
 
 ---
 
@@ -266,4 +272,6 @@ with L2's quarter-hearts on tiny 16px squares).
 - [ ] **HUD** is large enough to read the smallest stat change and has a numeric readout (§12);
       arrow/space keys don't scroll the sandbox (§5).
 - [ ] Combat is fair: slow, varied enemies; small fractional damage; low count (§11).
+- [ ] **Every exercise draws to the canvas** — no topic leaves the game screen blank (§5).
+      Verify by rendering each exercise, not just reading its console output.
 - [ ] Final project matches the level's game milestone and continues the shared game.
