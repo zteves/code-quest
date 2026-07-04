@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Quest</title>
+<style>
+  /* ---------- Zelda-flavored theme (readable first, adventure second) ---------- */
+  :root{
+    --forest:#2e5d34;
+    --forest-dark:#1c3a20;
+    --forest-darker:#132a17;
+    --grass:#7cb342;
+    --grass-light:#a7e07a;
+    --gold:#e6b422;
+    --gold-deep:#b8860b;
+    --parchment:#f6ead0;
+    --parchment-2:#efdcb4;
+    --ink:#3a2a15;
+    --ink-soft:#5b4526;
+    --rupee:#37b34a;
+    --rupee-blue:#3aa0d6;
+    --heart:#e23b3b;
+    --heart-empty:#7a5a5a;
+    --shadow:rgba(19,42,23,.35);
+    --focus:#2ec5ff;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI",Tahoma,Verdana,system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 20% -10%, #3c7a44 0, transparent 45%),
+      radial-gradient(circle at 90% 0%, #2b5a31 0, transparent 40%),
+      var(--forest-dark);
+    line-height:1.65;
+    font-size:17px;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:.5px;line-height:1.25;}
+
+  /* Pixel-stepped border helper for that retro-cart feel */
+  .pixel{
+    box-shadow:
+      0 0 0 3px var(--forest-darker),
+      0 0 0 6px var(--gold),
+      0 0 0 9px var(--forest-darker),
+      0 10px 24px var(--shadow);
+  }
+
+  a{color:var(--gold-deep);}
+
+  /* ---------- Top bar / heart meter ---------- */
+  header{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(180deg,var(--forest) 0%, var(--forest-dark) 100%);
+    border-bottom:4px solid var(--gold);
+    padding:10px 16px;
+    color:#fff;
+  }
+  .topwrap{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:Georgia,serif;font-weight:700;font-size:1.15rem;color:#fff8dc;text-shadow:1px 1px 0 #000;}
+  .brand svg{filter:drop-shadow(0 1px 0 #000);}
+  .meter{flex:1;min-width:220px;}
+  .meter-label{font-size:.8rem;color:#ffe9a8;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;display:flex;justify-content:space-between;}
+  .hearts{display:flex;gap:3px;align-items:center;flex-wrap:wrap;}
+  .bar{height:14px;background:var(--forest-darker);border:2px solid #000;border-radius:8px;overflow:hidden;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,.5);}
+  .bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--rupee),var(--grass-light));transition:width .4s ease;}
+  @media (prefers-reduced-motion: reduce){ .bar-fill{transition:none;} }
+  .rupees{display:flex;align-items:center;gap:6px;font-weight:700;color:#c8f7cf;background:rgba(0,0,0,.25);padding:4px 10px;border-radius:20px;font-size:.95rem;}
+  .btn{
+    font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:8px;
+    padding:9px 14px;font-size:.95rem;transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+  .btn-gold{background:linear-gradient(180deg,#f4cf5a,var(--gold));color:#4a3500;box-shadow:0 3px 0 var(--gold-deep);}
+  .btn-gold:hover{filter:brightness(1.06);}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.5);}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+  .btn-green{background:linear-gradient(180deg,#8fd35a,var(--rupee));color:#0d2e12;box-shadow:0 3px 0 #1f7a2c;}
+  .btn-green:hover{filter:brightness(1.06);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;}
+
+  /* ---------- Layout ---------- */
+  .layout{max-width:1200px;margin:22px auto;padding:0 16px;display:grid;grid-template-columns:290px 1fr;gap:22px;align-items:start;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+
+  /* Sidebar map */
+  .map{
+    background:linear-gradient(180deg,var(--parchment),var(--parchment-2));
+    border-radius:12px;padding:14px;position:sticky;top:96px;
+  }
+  @media (max-width:900px){ .map{position:static;} }
+  .map h2{margin:.1rem 0 .6rem;font-size:1.05rem;color:var(--forest-dark);text-align:center;}
+  .map-sub{text-align:center;font-size:.78rem;color:var(--ink-soft);margin-bottom:10px;}
+  .quest{list-style:none;margin:0;padding:0;counter-reset:q;max-height:60vh;overflow:auto;}
+  .quest li{margin:0 0 6px;}
+  .quest button{
+    width:100%;text-align:left;display:flex;align-items:center;gap:9px;
+    background:rgba(255,255,255,.55);border:2px solid transparent;border-radius:9px;
+    padding:8px 10px;cursor:pointer;font-family:inherit;font-size:.92rem;color:var(--ink);
+    transition:background .15s,border-color .15s;
+  }
+  .quest button:hover{background:#fff;}
+  .quest button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .quest button.active{border-color:var(--gold);background:#fff7e0;font-weight:700;}
+  .quest .dot{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;color:#fff;background:var(--ink-soft);}
+  .quest button.done .dot{background:var(--rupee);}
+  .quest button.active .dot{background:var(--gold);color:#3a2a00;}
+  .quest .ttl{flex:1;}
+  .quest .check{color:var(--rupee);font-weight:700;}
+
+  .reset-row{margin-top:12px;text-align:center;}
+  .reset-btn{background:none;border:none;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-size:.8rem;font-family:inherit;}
+  .reset-btn:hover{color:var(--heart);}
+
+  /* Main scroll (the topic) */
+  main{min-width:0;}
+  .scroll{
+    background:linear-gradient(180deg,var(--parchment),#fff6e0 60%,var(--parchment-2));
+    border-radius:14px;padding:26px 26px 30px;
+  }
+  .eyebrow{display:inline-block;background:var(--forest);color:#fff2c8;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;}
+  .scroll h1{font-size:1.9rem;margin:.5rem 0 .2rem;color:var(--forest-dark);}
+  .scroll .tag{color:var(--ink-soft);font-style:italic;margin:0 0 18px;}
+
+  .section{margin:22px 0;padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.55);border-left:6px solid var(--gold);}
+  .section.model{border-left-color:var(--rupee-blue);background:#eef7fb;}
+  .section.mistakes{border-left-color:var(--heart);background:#fbeeee;}
+  .section.exercise{border-left-color:var(--rupee);background:#eefaef;}
+  .section.summary{border-left-color:var(--gold-deep);background:#fbf3dd;}
+  .section h3{margin:.1rem 0 .5rem;display:flex;align-items:center;gap:9px;font-size:1.15rem;color:var(--forest-dark);}
+  .section.model h3{color:#1c5b7a;}
+  .section.mistakes h3{color:#a52424;}
+  .section.exercise h3{color:#1f7a2c;}
+  .section p{margin:.5rem 0;}
+  .section ul{margin:.4rem 0;padding-left:1.3rem;}
+  .section li{margin:.3rem 0;}
+
+  .word{border-bottom:2px dotted var(--gold-deep);cursor:help;font-weight:700;color:var(--ink);}
+  code{background:#2b2016;color:#ffe9a8;padding:2px 6px;border-radius:5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;}
+  pre{background:#221a12;color:#f4e9d2;padding:14px 16px;border-radius:10px;overflow:auto;border:2px solid var(--gold-deep);}
+  pre code{background:none;color:inherit;padding:0;}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+  @media (max-width:560px){ .compare{grid-template-columns:1fr;} }
+  .compare .col{background:#fff;border-radius:10px;padding:10px 12px;border:2px solid var(--parchment-2);}
+  .compare .col h4{margin:.1rem 0 .4rem;font-size:.95rem;}
+
+  .try-btn{margin-top:8px;}
+  .foot-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap;}
+
+  .complete-row{margin-top:20px;padding:16px;border-radius:12px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .complete-row.done{background:linear-gradient(180deg,#2f7a38,#1f5a27);}
+  .complete-row p{margin:0;font-weight:700;}
+
+  /* ---------- Playground ---------- */
+  .pg{margin-top:22px;background:var(--forest-darker);border-radius:14px;padding:14px;}
+  .pg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .pg-head h3{color:#ffe9a8;margin:0;font-size:1.05rem;display:flex;align-items:center;gap:8px;}
+  .pg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:760px){ .pg-grid{grid-template-columns:1fr;} }
+  .pg-pane label{display:block;color:#cfe8b8;font-size:.78rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
+  textarea#editor{
+    width:100%;height:280px;resize:vertical;border-radius:10px;border:2px solid var(--gold-deep);
+    background:#161009;color:#f4e9d2;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+    padding:12px;line-height:1.5;tab-size:2;
+  }
+  textarea#editor:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .pg-out{width:100%;height:280px;border:2px solid var(--gold-deep);border-radius:10px;background:#0f2410;}
+  .pg-hint{color:#a9c99a;font-size:.8rem;margin-top:8px;}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120%);
+    background:var(--forest);color:#fff7d6;border:3px solid var(--gold);border-radius:12px;
+    padding:12px 20px;font-weight:700;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.5);
+    transition:transform .35s cubic-bezier(.2,1.3,.4,1);max-width:90vw;text-align:center;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none;} }
+
+  /* Tooltip for hard words */
+  .tip{position:fixed;z-index:70;max-width:260px;background:#221a12;color:#ffe9a8;border:2px solid var(--gold);border-radius:10px;padding:8px 12px;font-size:.85rem;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;}
+
+  /* Mute toggle */
+  .mute-btn{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.35);color:#fff;border-radius:20px;padding:5px 12px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.85rem;}
+  .mute-btn:hover{background:rgba(0,0,0,.4);}
+  .mute-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+
+  .trophy-btn{width:100%;margin-top:10px;}
+
+  /* Certificate modal */
+  .cert-backdrop{position:fixed;inset:0;z-index:80;background:rgba(10,20,10,.82);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto;}
+  .cert-backdrop.show{display:flex;}
+  .cert{
+    position:relative;width:min(680px,94vw);background:
+      repeating-linear-gradient(45deg,rgba(0,0,0,.015) 0 8px,transparent 8px 16px),
+      linear-gradient(180deg,#fbf1d6,#f2e2b8);
+    border-radius:8px;padding:38px 34px 30px;color:var(--ink);text-align:center;
+    box-shadow:0 0 0 4px var(--forest-dark),0 0 0 8px var(--gold),0 0 0 12px var(--forest-dark),0 24px 60px rgba(0,0,0,.6);
+  }
+  .cert .seal{margin:0 auto 6px;}
+  .cert .cert-kicker{letter-spacing:5px;text-transform:uppercase;font-size:.8rem;color:var(--forest-dark);font-weight:700;}
+  .cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2rem 0;color:var(--forest-dark);}
+  .cert .ribbon{color:var(--gold-deep);font-style:italic;margin:.1rem 0 1rem;}
+  .cert .awarded{font-size:.9rem;color:var(--ink-soft);margin:.2rem 0;}
+  .cert .name-input{
+    font-family:Georgia,serif;font-size:1.7rem;font-weight:700;text-align:center;color:var(--forest-dark);
+    border:none;border-bottom:3px dashed var(--gold-deep);background:transparent;width:90%;max-width:420px;margin:6px auto 4px;padding:4px 8px;display:block;
+  }
+  .cert .name-input:focus{outline:none;border-bottom-color:var(--rupee);}
+  .cert .name-hint{font-size:.72rem;color:var(--ink-soft);margin-bottom:14px;}
+  .cert .cert-body{font-size:1rem;line-height:1.6;margin:8px auto 16px;max-width:520px;}
+  .cert .cert-meta{display:flex;justify-content:space-between;gap:12px;margin:18px 24px 6px;font-size:.85rem;color:var(--ink-soft);}
+  .cert .cert-meta b{display:block;color:var(--forest-dark);border-top:2px solid var(--ink-soft);padding-top:4px;font-family:Georgia,serif;}
+  .cert-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;}
+  .cert-close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink-soft);}
+  .cert-close:hover{color:var(--heart);}
+  .confetti{position:fixed;top:-10px;width:9px;height:14px;z-index:85;pointer-events:none;border-radius:2px;}
+  @media (prefers-reduced-motion: reduce){ .confetti{display:none!important;} }
+
+  @media print{
+    body{background:#fff;}
+    body > *{visibility:hidden;}
+    .cert-backdrop, .cert-backdrop *{visibility:visible;}
+    .cert-backdrop{position:absolute;inset:0;background:#fff;display:flex!important;padding:0;}
+    .cert{box-shadow:0 0 0 3px #000, 0 0 0 7px #b8860b, 0 0 0 10px #000;}
+    .cert-actions,.cert-close{display:none!important;}
+  }
+
+  footer{max-width:1200px;margin:10px auto 40px;padding:0 16px;color:#bfe0b3;font-size:.82rem;text-align:center;}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topwrap">
+    <div class="brand">
+      <!-- little triforce -->
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true">
+        <polygon points="13,0 17,7 9,7" fill="#ffe14d"/>
+        <polygon points="8,9 12,16 4,16" fill="#ffe14d"/>
+        <polygon points="18,9 22,16 14,16" fill="#ffe14d"/>
+      </svg>
+      Code Quest
+    </div>
+    <div class="meter" aria-hidden="false">
+      <div class="meter-label"><span>Hero Progress</span><span id="pctText">0%</span></div>
+      <div class="hearts" id="hearts" aria-label="Progress hearts"></div>
+      <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+    <div class="rupees" title="One rupee for every quest you finish">
+      <svg width="14" height="18" viewBox="0 0 14 18" aria-hidden="true"><polygon points="7,0 14,5 14,13 7,18 0,13 0,5" fill="#37e07a" stroke="#0d5c27" stroke-width="1"/></svg>
+      <span id="rupeeCount">0</span> rupees
+    </div>
+    <button class="mute-btn" id="muteBtn" type="button" aria-pressed="false" title="Turn game sounds on or off">
+      <span id="muteIcon" aria-hidden="true"></span><span id="muteLabel">Sound</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar: the world map -->
+  <aside class="map pixel">
+    <h2>World Map</h2>
+    <div class="map-sub">Clear each dungeon to grow your hearts</div>
+    <ul class="quest" id="questList"></ul>
+    <button class="btn btn-gold trophy-btn" id="trophyBtn" type="button">&#127942; Trophy Room</button>
+    <div class="reset-row">
+      <button class="reset-btn" id="resetBtn">Start a new game (reset progress)</button>
+    </div>
+  </aside>
+
+  <!-- Main: the scroll -->
+  <main>
+    <section class="scroll pixel" id="scroll" aria-live="polite"></section>
+
+    <!-- Playground -->
+    <section class="pg pixel" aria-label="Code playground">
+      <div class="pg-head">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9l4-4 1.4 1.4L4.8 9l2.6 2.6L6 13 2 9zm14 0l-4 4-1.4-1.4L13.2 9l-2.6-2.6L12 5l4 4z" fill="#ffe14d"/></svg>
+          Magic Workshop (run your code)
+        </h3>
+        <div class="pg-actions">
+          <button class="btn btn-ghost" id="loadExample" type="button">Load example</button>
+          <button class="btn btn-ghost" id="resetCode" type="button">Reset code</button>
+          <button class="btn btn-green" id="runBtn" type="button">▶ Run</button>
+        </div>
+      </div>
+      <div class="pg-grid">
+        <div class="pg-pane">
+          <label for="editor">Your spellbook (type code here)</label>
+          <textarea id="editor" spellcheck="false" aria-label="Code editor"></textarea>
+        </div>
+        <div class="pg-pane">
+          <label>What happens (screen + messages)</label>
+          <iframe id="stage" class="pg-out" title="Code output" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <p class="pg-hint">Tip: click the game screen first so the arrow keys work. Your code and progress save by themselves — you can close this and come back later.</p>
+    </section>
+
+    <footer>Made for brave new game-makers. Everything runs on your own computer, even with no internet. 🗡️</footer>
+  </main>
+</div>
+
+<!-- Certificate of Completion -->
+<div class="cert-backdrop" id="certModal" role="dialog" aria-modal="true" aria-labelledby="certTitle">
+  <div class="cert">
+    <button class="cert-close" id="certClose" type="button" aria-label="Close certificate">&times;</button>
+    <svg class="seal" width="58" height="54" viewBox="0 0 58 54" aria-hidden="true">
+      <polygon points="29,2 39,19 19,19" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="18,22 28,39 8,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="40,22 50,39 30,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+    </svg>
+    <div class="cert-kicker">Hyrule Academy of Game-Making</div>
+    <h2 id="certTitle">Certificate of Completion</h2>
+    <div class="ribbon">~ Master Game-Maker ~</div>
+    <div class="awarded">This heroic certificate is proudly awarded to</div>
+    <input class="name-input" id="heroNameInput" type="text" maxlength="28" aria-label="Your name" placeholder="Type your name">
+    <div class="name-hint">(click your name to change it — it saves automatically)</div>
+    <p class="cert-body" id="certBody"></p>
+    <div class="cert-meta">
+      <div>Date<b id="certDate">—</b></div>
+      <div>Rank<b>Master Game-Maker</b></div>
+      <div>Hearts<b id="certHearts">15 / 15</b></div>
+    </div>
+    <div class="cert-actions">
+      <button class="btn btn-gold" id="certPrint" type="button">&#128424; Print / Save as PDF</button>
+      <button class="btn btn-green" id="certReplay" type="button">&#9835; Play fanfare</button>
+      <button class="btn btn-ghost" id="certCloseBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+/* ============================================================
+   CODE QUEST — single-file offline course
+   All data + logic below. No network, no dependencies.
+   ============================================================ */
+
+/* ============================================================
+   LEVEL CONFIG — every level fills this in. See STANDARDS.md §10.
+   ============================================================ */
+const LEVEL = {
+  number: 0,                       // e.g. 2
+  id: "template",                  // short slug, e.g. "l2-combat"
+  title: "Code Quest — Template",  // shown in the browser tab
+  subtitle: "Level template",      // short tagline
+  saveKey: "codequest_template_v1",// UNIQUE per level: codequest_L<n>_v<schema>
+  // Certificate body (HTML). Describe what THIS level taught + the game milestone.
+  certBody: "For bravely clearing every dungeon of this level and building the next "
+    + "piece of the Code Quest adventure. A true coder and game-maker!"
+};
+document.title = LEVEL.title;
+
+/* ---------- helper for defining a "hard word" tooltip ---------- */
+function W(word, meaning){
+  return '<span class="word" data-tip="'+meaning.replace(/"/g,'&quot;')+'">'+word+'</span>';
+}
+
+/* ---------- The curriculum ---------- */
+/* Each topic: title, sub, lesson(html), model, mistakes[], exercise{intro, starter}, summary */
+const TOPICS = [
+/* ============================================================
+   TEMPLATE EXAMPLE TOPICS — replace ALL of these when building a level.
+   Keep the shape: id, title, sub, lesson(HTML), model, mistakes[],
+   exercise{intro, starter}, summary. Follow STANDARDS.md (5-part contract
+   + human-readable variable names). Mark a topic isFinal:true for the
+   level's final project step(s).
+   ============================================================ */
+{
+  id:"example-basics",
+  title:"Example Dungeon (replace me)",
+  sub:"How a topic is built",
+  lesson:
+    "<p>This is a template topic. Copy <code>template/base.html</code>, then replace every "+
+    "topic in the <code>TOPICS</code> list with your real lessons. Each topic MUST keep all "+
+    "five parts, in order: Lesson, Mental Model, Common Mistakes, Exercise, and Quick Recap.</p>"+
+    "<p>Notice the variable names below — they are written for a human to read, following the "+
+    "naming rule. We say "+W("readable names","variable names that spell out what they hold, like heroHealth instead of hp")+" "+
+    "like <code>heroHealth</code>, never <code>hp</code>.</p>"+
+    "<pre><code>let heroHealth = 3;\nlet rupeesCollected = 0;\n\nrupeesCollected = rupeesCollected + 5;\nconsole.log(\"Rupees:\", rupeesCollected);</code></pre>",
+  model:"A topic is a tiny quest: teach one idea, picture it, warn about the traps, practice it, then recap.",
+  mistakes:[
+    "Skipping one of the five parts. All five are required to ship.",
+    "Using cryptic names like <code>hp</code> or <code>nc</code>. Spell it out: <code>heroHealth</code>, <code>nextCol</code>.",
+    "Explaining a hard word without a plain-language meaning the first time it appears."
+  ],
+  exercise:{
+    intro:"Run the starter code. Then change the rupee amount and press Run again to watch the number change.",
+    starter:'let heroHealth = 3;\nlet rupeesCollected = 0;\n\n// Found a small chest!\nrupeesCollected = rupeesCollected + 5;\n\nconsole.log("Health:", heroHealth);\nconsole.log("Rupees:", rupeesCollected);'
+  },
+  summary:"Every topic has 5 parts in order. Variable names are always human-readable. This topic is a placeholder — replace it."
+},
+{
+  id:"example-sprite",
+  title:"Example Dungeon · Sprites",
+  sub:"Drawing a sprite from an array",
+  lesson:
+    "<p>From Level 2 on, characters are drawn from a grid of colored pixels. The playground "+
+    "gives you a helper called <code>drawSprite</code> and a shared color map called "+
+    "<code>PALETTE</code>. A "+W("sprite","a small picture in a game, here made from a grid of colored squares")+" "+
+    "is just an array of rows!</p>"+
+    "<pre><code>const slimeSprite = [\n  \"..gggg..\",\n  \".gggggg.\",\n  \"gggggggg\",\n  \".g.gg.g.\"\n];\n\ndrawSprite(slimeSprite, 100, 100, 8, PALETTE);</code></pre>"+
+    "<p>Each letter is a color from <code>PALETTE</code> (<code>g</code> is green, <code>.</code> is "+
+    "see-through). The last number is how big each pixel is drawn.</p>",
+  model:"A sprite is graph paper. Each letter is a colored square; a loop stamps them onto the canvas.",
+  mistakes:[
+    "Rows of different lengths. Keep every row the same number of letters.",
+    "Forgetting the <code>.</code> for see-through spots, so the whole box fills in solid.",
+    "Using a color letter that is not in <code>PALETTE</code>, so nothing shows up."
+  ],
+  exercise:{
+    intro:"Run it to see a green slime. Then change some letters to draw your own creature. Try 'r' for red or 'b' for blue!",
+    starter:'const slimeSprite = [\n  "..gggg..",\n  ".gggggg.",\n  "gg g gg.",\n  "gggggggg",\n  ".g.gg.g."\n];\n\n// grass background\nctx.fillStyle = "#4c9a2a";\nctx.fillRect(0, 0, 320, 320);\n\ndrawSprite(slimeSprite, 120, 130, 10, PALETTE);\nconsole.log("There is your first sprite! Change the letters to remix it.");'
+  },
+  summary:"Sprites are arrays of color letters. drawSprite(sprite, x, y, pixelSize, PALETTE) paints them. PALETTE maps letters to colors."
+}
+];
+
+/* ============================================================
+   State + storage
+   ============================================================ */
+const STORE_KEY = LEVEL.saveKey;
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return { completed:{}, current:TOPICS[0].id, code:{}, muted:false, heroName:"" };
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const questList = document.getElementById("questList");
+const scroll = document.getElementById("scroll");
+const heartsEl = document.getElementById("hearts");
+const barFill = document.getElementById("barFill");
+const pctText = document.getElementById("pctText");
+const rupeeCount = document.getElementById("rupeeCount");
+const editor = document.getElementById("editor");
+const stage = document.getElementById("stage");
+
+function completedCount(){
+  return TOPICS.filter(t => state.completed[t.id]).length;
+}
+
+function renderMap(){
+  questList.innerHTML = "";
+  TOPICS.forEach((t, i) => {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const done = !!state.completed[t.id];
+    const active = state.current === t.id;
+    btn.className = (done?"done ":"") + (active?"active":"");
+    btn.setAttribute("aria-current", active ? "true" : "false");
+    btn.innerHTML =
+      '<span class="dot">'+(done ? '&#10003;' : (i+1))+'</span>'+
+      '<span class="ttl">'+t.sub+'</span>'+
+      (done ? '<span class="check" aria-label="completed">&#9733;</span>' : '');
+    btn.addEventListener("click", () => { goTo(t.id); });
+    li.appendChild(btn);
+    questList.appendChild(li);
+  });
+}
+
+function renderMeter(){
+  const total = TOPICS.length;
+  const done = completedCount();
+  const pct = Math.round((done/total)*100);
+  barFill.style.width = pct + "%";
+  pctText.textContent = pct + "%";
+  rupeeCount.textContent = done;
+  // hearts: one heart per topic, filled if completed
+  heartsEl.innerHTML = "";
+  TOPICS.forEach((t) => {
+    const filled = !!state.completed[t.id];
+    heartsEl.insertAdjacentHTML("beforeend", heartSVG(filled));
+  });
+}
+
+function heartSVG(filled){
+  const color = filled ? "#e23b3b" : "#5a3a3a";
+  const stroke = filled ? "#8e1b1b" : "#3a2020";
+  return '<svg width="16" height="15" viewBox="0 0 16 15" aria-hidden="true">'+
+    '<path d="M8 14S1 9.5 1 4.8C1 2.7 2.7 1 4.8 1 6 1 7.2 1.6 8 2.7 8.8 1.6 10 1 11.2 1 13.3 1 15 2.7 15 4.8 15 9.5 8 14 8 14z" '+
+    'fill="'+color+'" stroke="'+stroke+'" stroke-width="1"/></svg>';
+}
+
+function renderTopic(){
+  const t = TOPICS.find(x => x.id === state.current) || TOPICS[0];
+  const idx = TOPICS.indexOf(t);
+  const done = !!state.completed[t.id];
+
+  let html = "";
+  html += '<span class="eyebrow">'+(t.isFinal ? 'Final Quest' : ('Dungeon '+(idx+1)+' of '+TOPICS.length))+'</span>';
+  html += '<h1>'+t.title+'</h1>';
+  html += '<p class="tag">'+t.sub+'</p>';
+
+  html += '<div class="section lesson"><h3>'+bookIcon()+'The Lesson</h3>'+t.lesson+'</div>';
+
+  html += '<div class="section model"><h3>'+brainIcon()+'Mental Model</h3><p>'+t.model+'</p></div>';
+
+  html += '<div class="section mistakes"><h3>'+warnIcon()+'Watch Out! Common Mistakes</h3><ul>';
+  t.mistakes.forEach(m => { html += '<li>'+m+'</li>'; });
+  html += '</ul></div>';
+
+  html += '<div class="section exercise"><h3>'+swordIcon()+'Your Quest (Exercise)</h3><p>'+t.exercise.intro+'</p>'+
+          '<button class="btn btn-green try-btn" id="loadExerciseBtn" type="button">Load this quest into the Workshop &darr;</button></div>';
+
+  html += '<div class="section summary"><h3>'+scrollIcon()+'Quick Recap</h3><p>'+t.summary+'</p></div>';
+
+  // complete row
+  html += '<div class="complete-row '+(done?'done':'')+'">'+
+            '<p>'+(done ? '&#9733; Quest cleared! A heart is yours.' : 'Finished this dungeon? Claim your heart!')+'</p>'+
+            '<button class="btn '+(done?'btn-ghost':'btn-gold')+'" id="completeBtn" type="button">'+
+              (done ? 'Mark as not done' : 'Mark complete &#10003;')+
+            '</button>'+
+          '</div>';
+
+  // footer nav
+  html += '<div class="foot-nav">';
+  html += idx>0 ? '<button class="btn btn-ghost" id="prevBtn" type="button">&larr; Previous</button>' : '<span></span>';
+  html += idx<TOPICS.length-1 ? '<button class="btn btn-gold" id="nextBtn" type="button">Next dungeon &rarr;</button>' : '<span></span>';
+  html += '</div>';
+
+  scroll.innerHTML = html;
+
+  // wire buttons
+  document.getElementById("completeBtn").addEventListener("click", toggleComplete);
+  const lx = document.getElementById("loadExerciseBtn");
+  if(lx) lx.addEventListener("click", () => { setEditor(t.exercise.starter); runCode(); toast("Quest loaded! Press Run ▶"); scrollToWorkshop(); });
+  const pb = document.getElementById("prevBtn"); if(pb) pb.addEventListener("click", () => goTo(TOPICS[idx-1].id));
+  const nb = document.getElementById("nextBtn"); if(nb) nb.addEventListener("click", () => goTo(TOPICS[idx+1].id));
+
+  // load saved code for this topic (or the starter)
+  const saved = state.code[t.id];
+  setEditor(typeof saved === "string" ? saved : t.exercise.starter);
+
+  wireWords();
+  scroll.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* small inline icons (SVG, no emojis in UI chrome) */
+function bookIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h6v14H3z" fill="#7a5a2a"/><path d="M11 3h6v14h-6z" fill="#9a7238"/><path d="M9 3h2v14H9z" fill="#5b4526"/></svg>';}
+function brainIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="#3aa0d6"/><path d="M10 5v10M6 8h8M6 12h8" stroke="#fff" stroke-width="1.4"/></svg>';}
+function warnIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8 15H2z" fill="#e23b3b"/><path d="M10 8v4M10 14v.5" stroke="#fff" stroke-width="1.8"/></svg>';}
+function swordIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M14 2l4 4-7 7-2-2z" fill="#c9ced6"/><path d="M4 14l3 3-2 1-2-2z" fill="#8a5a2a"/></svg>';}
+function scrollIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="3" width="12" height="14" rx="2" fill="#e6b422"/><path d="M6 6h8M6 9h8M6 12h6" stroke="#5b4526" stroke-width="1.2"/></svg>';}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function goTo(id){
+  state.current = id;
+  saveState();
+  renderMap();
+  renderTopic();
+}
+
+function toggleComplete(){
+  const id = state.current;
+  const wasDone = !!state.completed[id];
+  if(wasDone){ delete state.completed[id]; }
+  else { state.completed[id] = true; }
+  saveState();
+  renderMap();
+  renderMeter();
+  renderTopic();
+  if(!wasDone){
+    const n = completedCount();
+    if(n === TOPICS.length){
+      toast("🏆 ALL DUNGEONS CLEARED! You are a true game-maker!");
+      playSound("complete");
+      setTimeout(() => openCertificate(true), 650);
+    } else {
+      toast("New skill unlocked! +1 heart, +1 rupee");
+      playSound("complete");
+    }
+  }
+}
+
+function setEditor(code){ editor.value = code; }
+
+function scrollToWorkshop(){
+  document.querySelector(".pg").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------- The sandboxed playground ---------- */
+function runCode(){
+  const code = editor.value;
+  // save this code for the current topic
+  state.code[state.current] = code;
+  saveState();
+
+  const head =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
+    'html,body{margin:0;padding:8px;background:#0f2410;color:#e8ffd0;'+
+    'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;}'+
+    '#stageC{background:#4c9a2a;display:block;margin:0 auto 8px;border:3px solid #d4af37;'+
+    'border-radius:4px;image-rendering:pixelated;outline:none;}'+
+    '#out div{white-space:pre-wrap;line-height:1.5;padding:1px 0;}'+
+    '.ok{color:#d9f7b0;} .err{color:#ff9b9b;font-weight:bold;} .info{color:#9fd0ff;}'+
+    '</style></head><body>'+
+    '<canvas id="stageC" width="320" height="320" tabindex="0"></canvas>'+
+    '<div id="out"></div><script>(function(){'+
+    'var out=document.getElementById("out");'+
+    'var canvas=document.getElementById("stageC");'+
+    'var ctx=canvas.getContext("2d");'+
+    'canvas.focus();'+
+    'function show(cls,args){var d=document.createElement("div");d.className=cls;'+
+    'd.textContent=args.map(function(a){if(a&&typeof a==="object"){try{return JSON.stringify(a);}catch(e){return String(a);}}return String(a);}).join(" ");'+
+    'out.appendChild(d);}'+
+    'console.log=function(){show("ok",[].slice.call(arguments));};'+
+    'console.info=function(){show("info",[].slice.call(arguments));};'+
+    'console.warn=function(){show("info",[].slice.call(arguments));};'+
+    'console.error=function(){show("err",[].slice.call(arguments));};'+
+    'function friendly(m){m=String(m);'+
+    'if(/is not defined/.test(m))return m+"  (maybe a typo, or you forgot to make that variable?)";'+
+    'if(/unexpected|Unexpected/.test(m))return m+"  (check for a missing ) } or a stray character)";'+
+    'if(/cannot read|Cannot read/.test(m))return m+"  (you tried to use something that is empty)";'+
+    'return m;}'+
+    'window.onerror=function(msg,src,line){show("err",["Oops! "+friendly(msg)+(line?("  [line "+line+"]"):"")]);return true;};';
+
+  // Shared sprite helpers available to every exercise (see template/sprites.md)
+  const helpers =
+    'var PALETTE={".":null," ":null,"k":"#1a1a1a","w":"#ffffff","s":"#f2c79a","g":"#3aa63a","G":"#1f6d1f","b":"#3a6ea6","y":"#ffd23f","r":"#d63a3a","n":"#8a5a2a","e":"#e8e8e8","p":"#9a4ecf"};' +
+    'function drawSprite(sprite,screenX,screenY,pixelSize,palette){palette=palette||PALETTE;for(var rowIndex=0;rowIndex<sprite.length;rowIndex++){var row=sprite[rowIndex];for(var colIndex=0;colIndex<row.length;colIndex++){var color=palette[row[colIndex]];if(!color)continue;ctx.fillStyle=color;ctx.fillRect(screenX+colIndex*pixelSize,screenY+rowIndex*pixelSize,pixelSize,pixelSize);}}}';
+
+  const tail = '\n})();<\/scr'+'ipt></body></html>';
+
+  // wrap the user code in a try so runtime errors are friendly
+  const userWrapped = 'try{\n' + code + '\n}catch(e){show("err",["Oops! "+friendly(e.message)]);}';
+
+  stage.srcdoc = head + helpers + userWrapped + tail;
+}
+
+/* ---------- Hard-word tooltips ---------- */
+const tip = document.getElementById("tip");
+function wireWords(){
+  scroll.querySelectorAll(".word").forEach(el => {
+    el.setAttribute("tabindex","0");
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label", el.textContent + ": " + el.getAttribute("data-tip"));
+    el.addEventListener("mouseenter", showTip);
+    el.addEventListener("mousemove", moveTip);
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("focus", showTip);
+    el.addEventListener("blur", hideTip);
+  });
+}
+function showTip(e){
+  const t = e.currentTarget.getAttribute("data-tip");
+  tip.textContent = t;
+  tip.style.display = "block";
+  positionTip(e);
+}
+function moveTip(e){ positionTip(e); }
+function positionTip(e){
+  const pad = 14;
+  let x, y;
+  const r = e.currentTarget.getBoundingClientRect();
+  if(e.clientX){ x = e.clientX + pad; y = e.clientY + pad; }
+  else { x = r.left; y = r.bottom + 6; }
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  if(x + w > window.innerWidth - 8) x = window.innerWidth - w - 8;
+  if(y + h > window.innerHeight - 8) y = r.top - h - 6;
+  tip.style.left = Math.max(8,x) + "px";
+  tip.style.top = Math.max(8,y) + "px";
+}
+function hideTip(){ tip.style.display = "none"; }
+
+/* ============================================================
+   Sound effects (Web Audio — offline, no files)
+   ============================================================ */
+let audioCtx = null;
+function ac(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  return audioCtx;
+}
+function tone(freq, start, dur, type, vol){
+  const c = ac(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type || "square";
+  o.frequency.value = freq;
+  o.connect(g); g.connect(c.destination);
+  const t0 = c.currentTime + start;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol || 0.18, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur + 0.03);
+}
+function playSound(name){
+  if(state.muted) return;
+  const c = ac(); if(!c) return;
+  if(c.state === "suspended"){ try{ c.resume(); }catch(e){} }
+  if(name === "complete"){
+    // bright little "secret found" pickup
+    [[659.25,0],[783.99,0.09],[987.77,0.18],[1318.51,0.28]].forEach(n => tone(n[0], n[1], 0.19, "square", 0.16));
+  } else if(name === "win"){
+    // triumphant fanfare for the certificate
+    [[523.25,0],[659.25,0.12],[783.99,0.24],[1046.5,0.38],[783.99,0.52],[1046.5,0.64],[1318.51,0.82]]
+      .forEach(n => tone(n[0], n[1], 0.24, "square", 0.2));
+    [[130.81,0],[196,0.38],[261.63,0.64]].forEach(n => tone(n[0], n[1], 0.4, "triangle", 0.14)); // bass
+  } else if(name === "click"){
+    tone(880, 0, 0.06, "square", 0.1);
+  }
+}
+
+/* Mute toggle */
+const muteIcon = document.getElementById("muteIcon");
+const muteLabel = document.getElementById("muteLabel");
+const muteBtn = document.getElementById("muteBtn");
+function speakerSVG(on){
+  return on
+    ? '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5c1.5 1.2 1.5 4.8 0 6M13 3c3 2.5 3 7.5 0 10" stroke="#fff" stroke-width="1.4" fill="none"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5l4 6M15 5l-4 6" stroke="#ff9b9b" stroke-width="1.6"/></svg>';
+}
+function renderMute(){
+  const on = !state.muted;
+  muteIcon.innerHTML = speakerSVG(on);
+  muteLabel.textContent = on ? "Sound on" : "Muted";
+  muteBtn.setAttribute("aria-pressed", state.muted ? "true" : "false");
+}
+muteBtn.addEventListener("click", () => {
+  state.muted = !state.muted;
+  saveState();
+  renderMute();
+  if(!state.muted) playSound("click");
+});
+
+/* ============================================================
+   Certificate of Completion
+   ============================================================ */
+const certModal = document.getElementById("certModal");
+const heroNameInput = document.getElementById("heroNameInput");
+const certDate = document.getElementById("certDate");
+const certHearts = document.getElementById("certHearts");
+
+function allDone(){ return completedCount() === TOPICS.length; }
+
+function openCertificate(celebrate){
+  heroNameInput.value = state.heroName || "";
+  certDate.textContent = new Date().toLocaleDateString(undefined, {year:"numeric", month:"long", day:"numeric"});
+  certHearts.textContent = completedCount() + " / " + TOPICS.length;
+  document.getElementById("certBody").innerHTML = LEVEL.certBody;
+  certModal.classList.add("show");
+  if(celebrate){
+    playSound("win");
+    confetti();
+  }
+  if(!state.heroName){ setTimeout(() => heroNameInput.focus(), 200); }
+}
+function closeCertificate(){ certModal.classList.remove("show"); }
+
+heroNameInput.addEventListener("input", () => {
+  state.heroName = heroNameInput.value;
+  saveState();
+});
+document.getElementById("certClose").addEventListener("click", closeCertificate);
+document.getElementById("certCloseBtn").addEventListener("click", closeCertificate);
+document.getElementById("certPrint").addEventListener("click", () => window.print());
+document.getElementById("certReplay").addEventListener("click", () => { playSound("win"); confetti(); });
+certModal.addEventListener("click", (e) => { if(e.target === certModal) closeCertificate(); });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape" && certModal.classList.contains("show")) closeCertificate(); });
+
+document.getElementById("trophyBtn").addEventListener("click", () => {
+  if(allDone()){ openCertificate(false); }
+  else {
+    const left = TOPICS.length - completedCount();
+    toast("Clear " + left + " more dungeon" + (left===1?"":"s") + " to earn your certificate!");
+  }
+});
+
+/* Confetti burst (respects reduced-motion via CSS) */
+function confetti(){
+  const colors = ["#e6b422","#37b34a","#e23b3b","#3aa0d6","#ffe14d"];
+  for(let i=0;i<70;i++){
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.background = colors[i % colors.length];
+    c.style.left = Math.random()*100 + "vw";
+    const dur = 2.2 + Math.random()*1.8;
+    const rot = (Math.random()*720-360);
+    c.style.transform = "rotate("+(Math.random()*360)+"deg)";
+    document.body.appendChild(c);
+    c.animate(
+      [{ transform:"translateY(-10px) rotate(0deg)", opacity:1 },
+       { transform:"translateY(100vh) rotate("+rot+"deg)", opacity:1 },
+       { transform:"translateY(102vh) rotate("+rot+"deg)", opacity:0 }],
+      { duration: dur*1000, easing:"cubic-bezier(.3,.6,.6,1)" }
+    ).onfinish = () => c.remove();
+  }
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ============================================================
+   Wire top-level controls
+   ============================================================ */
+document.getElementById("runBtn").addEventListener("click", () => { playSound("click"); runCode(); });
+document.getElementById("loadExample").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  runCode();
+  toast("Example loaded & running!");
+});
+document.getElementById("resetCode").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  delete state.code[t.id];
+  saveState();
+  toast("Code reset to the starter.");
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if(confirm("Start a brand-new game? This erases all your hearts, rupees, and saved code.")){
+    state = { completed:{}, current:TOPICS[0].id, code:{}, muted:state.muted, heroName:state.heroName };
+    saveState();
+    closeCertificate();
+    renderAll();
+    toast("New game started. Good luck, hero!");
+  }
+});
+
+// Tab inserts spaces in the editor instead of leaving the box
+editor.addEventListener("keydown", function(e){
+  if(e.key === "Tab"){
+    e.preventDefault();
+    const s = this.selectionStart, en = this.selectionEnd;
+    this.value = this.value.slice(0,s) + "  " + this.value.slice(en);
+    this.selectionStart = this.selectionEnd = s + 2;
+  }
+});
+// autosave editor as you type (debounced)
+let saveTimer;
+editor.addEventListener("input", function(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { state.code[state.current] = editor.value; saveState(); }, 400);
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+function renderAll(){
+  renderMap();
+  renderMeter();
+  renderTopic();
+  renderMute();
+}
+renderAll();
+// draw the current topic's code once so the workshop isn't empty
+runCode();
+</script>
+</body>
+</html>
