@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Quest</title>
+<style>
+  /* ---------- Zelda-flavored theme (readable first, adventure second) ---------- */
+  :root{
+    --forest:#2e5d34;
+    --forest-dark:#1c3a20;
+    --forest-darker:#132a17;
+    --grass:#7cb342;
+    --grass-light:#a7e07a;
+    --gold:#e6b422;
+    --gold-deep:#b8860b;
+    --parchment:#f6ead0;
+    --parchment-2:#efdcb4;
+    --ink:#3a2a15;
+    --ink-soft:#5b4526;
+    --rupee:#37b34a;
+    --rupee-blue:#3aa0d6;
+    --heart:#e23b3b;
+    --heart-empty:#7a5a5a;
+    --shadow:rgba(19,42,23,.35);
+    --focus:#2ec5ff;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI",Tahoma,Verdana,system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 20% -10%, #3c7a44 0, transparent 45%),
+      radial-gradient(circle at 90% 0%, #2b5a31 0, transparent 40%),
+      var(--forest-dark);
+    line-height:1.65;
+    font-size:17px;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:.5px;line-height:1.25;}
+
+  /* Pixel-stepped border helper for that retro-cart feel */
+  .pixel{
+    box-shadow:
+      0 0 0 3px var(--forest-darker),
+      0 0 0 6px var(--gold),
+      0 0 0 9px var(--forest-darker),
+      0 10px 24px var(--shadow);
+  }
+
+  a{color:var(--gold-deep);}
+
+  /* ---------- Top bar / heart meter ---------- */
+  header{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(180deg,var(--forest) 0%, var(--forest-dark) 100%);
+    border-bottom:4px solid var(--gold);
+    padding:10px 16px;
+    color:#fff;
+  }
+  .topwrap{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:Georgia,serif;font-weight:700;font-size:1.15rem;color:#fff8dc;text-shadow:1px 1px 0 #000;}
+  .brand svg{filter:drop-shadow(0 1px 0 #000);}
+  .meter{flex:1;min-width:220px;}
+  .meter-label{font-size:.8rem;color:#ffe9a8;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;display:flex;justify-content:space-between;}
+  .hearts{display:flex;gap:3px;align-items:center;flex-wrap:wrap;}
+  .bar{height:14px;background:var(--forest-darker);border:2px solid #000;border-radius:8px;overflow:hidden;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,.5);}
+  .bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--rupee),var(--grass-light));transition:width .4s ease;}
+  @media (prefers-reduced-motion: reduce){ .bar-fill{transition:none;} }
+  .rupees{display:flex;align-items:center;gap:6px;font-weight:700;color:#c8f7cf;background:rgba(0,0,0,.25);padding:4px 10px;border-radius:20px;font-size:.95rem;}
+  .btn{
+    font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:8px;
+    padding:9px 14px;font-size:.95rem;transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+  .btn-gold{background:linear-gradient(180deg,#f4cf5a,var(--gold));color:#4a3500;box-shadow:0 3px 0 var(--gold-deep);}
+  .btn-gold:hover{filter:brightness(1.06);}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.5);}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+  .btn-green{background:linear-gradient(180deg,#8fd35a,var(--rupee));color:#0d2e12;box-shadow:0 3px 0 #1f7a2c;}
+  .btn-green:hover{filter:brightness(1.06);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;}
+
+  /* ---------- Layout ---------- */
+  .layout{max-width:1200px;margin:22px auto;padding:0 16px;display:grid;grid-template-columns:290px 1fr;gap:22px;align-items:start;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+
+  /* Sidebar map */
+  .map{
+    background:linear-gradient(180deg,var(--parchment),var(--parchment-2));
+    border-radius:12px;padding:14px;position:sticky;top:96px;
+  }
+  @media (max-width:900px){ .map{position:static;} }
+  .map h2{margin:.1rem 0 .6rem;font-size:1.05rem;color:var(--forest-dark);text-align:center;}
+  .map-sub{text-align:center;font-size:.78rem;color:var(--ink-soft);margin-bottom:10px;}
+  .quest{list-style:none;margin:0;padding:0;counter-reset:q;max-height:60vh;overflow:auto;}
+  .quest li{margin:0 0 6px;}
+  .quest button{
+    width:100%;text-align:left;display:flex;align-items:center;gap:9px;
+    background:rgba(255,255,255,.55);border:2px solid transparent;border-radius:9px;
+    padding:8px 10px;cursor:pointer;font-family:inherit;font-size:.92rem;color:var(--ink);
+    transition:background .15s,border-color .15s;
+  }
+  .quest button:hover{background:#fff;}
+  .quest button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .quest button.active{border-color:var(--gold);background:#fff7e0;font-weight:700;}
+  .quest .dot{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;color:#fff;background:var(--ink-soft);}
+  .quest button.done .dot{background:var(--rupee);}
+  .quest button.active .dot{background:var(--gold);color:#3a2a00;}
+  .quest .ttl{flex:1;}
+  .quest .check{color:var(--rupee);font-weight:700;}
+
+  .reset-row{margin-top:12px;text-align:center;}
+  .reset-btn{background:none;border:none;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-size:.8rem;font-family:inherit;}
+  .reset-btn:hover{color:var(--heart);}
+
+  /* Main scroll (the topic) */
+  main{min-width:0;}
+  .scroll{
+    background:linear-gradient(180deg,var(--parchment),#fff6e0 60%,var(--parchment-2));
+    border-radius:14px;padding:26px 26px 30px;
+  }
+  .eyebrow{display:inline-block;background:var(--forest);color:#fff2c8;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;}
+  .scroll h1{font-size:1.9rem;margin:.5rem 0 .2rem;color:var(--forest-dark);}
+  .scroll .tag{color:var(--ink-soft);font-style:italic;margin:0 0 18px;}
+
+  .section{margin:22px 0;padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.55);border-left:6px solid var(--gold);}
+  .section.model{border-left-color:var(--rupee-blue);background:#eef7fb;}
+  .section.mistakes{border-left-color:var(--heart);background:#fbeeee;}
+  .section.exercise{border-left-color:var(--rupee);background:#eefaef;}
+  .section.summary{border-left-color:var(--gold-deep);background:#fbf3dd;}
+  .section h3{margin:.1rem 0 .5rem;display:flex;align-items:center;gap:9px;font-size:1.15rem;color:var(--forest-dark);}
+  .section.model h3{color:#1c5b7a;}
+  .section.mistakes h3{color:#a52424;}
+  .section.exercise h3{color:#1f7a2c;}
+  .section p{margin:.5rem 0;}
+  .section ul{margin:.4rem 0;padding-left:1.3rem;}
+  .section li{margin:.3rem 0;}
+
+  .word{border-bottom:2px dotted var(--gold-deep);cursor:help;font-weight:700;color:var(--ink);}
+  code{background:#2b2016;color:#ffe9a8;padding:2px 6px;border-radius:5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;}
+  pre{background:#221a12;color:#f4e9d2;padding:14px 16px;border-radius:10px;overflow:auto;border:2px solid var(--gold-deep);}
+  pre code{background:none;color:inherit;padding:0;}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+  @media (max-width:560px){ .compare{grid-template-columns:1fr;} }
+  .compare .col{background:#fff;border-radius:10px;padding:10px 12px;border:2px solid var(--parchment-2);}
+  .compare .col h4{margin:.1rem 0 .4rem;font-size:.95rem;}
+
+  .try-btn{margin-top:8px;}
+  .foot-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap;}
+
+  .complete-row{margin-top:20px;padding:16px;border-radius:12px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .complete-row.done{background:linear-gradient(180deg,#2f7a38,#1f5a27);}
+  .complete-row p{margin:0;font-weight:700;}
+
+  /* ---------- Playground ---------- */
+  .pg{margin-top:22px;background:var(--forest-darker);border-radius:14px;padding:14px;}
+  .pg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .pg-head h3{color:#ffe9a8;margin:0;font-size:1.05rem;display:flex;align-items:center;gap:8px;}
+  .pg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:760px){ .pg-grid{grid-template-columns:1fr;} }
+  .pg-pane label{display:block;color:#cfe8b8;font-size:.78rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
+  textarea#editor{
+    width:100%;height:280px;resize:vertical;border-radius:10px;border:2px solid var(--gold-deep);
+    background:#161009;color:#f4e9d2;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+    padding:12px;line-height:1.5;tab-size:2;
+  }
+  textarea#editor:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .pg-out{width:100%;height:280px;border:2px solid var(--gold-deep);border-radius:10px;background:#0f2410;}
+  .pg-hint{color:#a9c99a;font-size:.8rem;margin-top:8px;}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120%);
+    background:var(--forest);color:#fff7d6;border:3px solid var(--gold);border-radius:12px;
+    padding:12px 20px;font-weight:700;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.5);
+    transition:transform .35s cubic-bezier(.2,1.3,.4,1);max-width:90vw;text-align:center;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none;} }
+
+  /* Tooltip for hard words */
+  .tip{position:fixed;z-index:70;max-width:260px;background:#221a12;color:#ffe9a8;border:2px solid var(--gold);border-radius:10px;padding:8px 12px;font-size:.85rem;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;}
+
+  /* Mute toggle */
+  .mute-btn{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.35);color:#fff;border-radius:20px;padding:5px 12px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.85rem;}
+  .mute-btn:hover{background:rgba(0,0,0,.4);}
+  .mute-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+
+  .trophy-btn{width:100%;margin-top:10px;}
+
+  /* Certificate modal */
+  .cert-backdrop{position:fixed;inset:0;z-index:80;background:rgba(10,20,10,.82);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto;}
+  .cert-backdrop.show{display:flex;}
+  .cert{
+    position:relative;width:min(680px,94vw);background:
+      repeating-linear-gradient(45deg,rgba(0,0,0,.015) 0 8px,transparent 8px 16px),
+      linear-gradient(180deg,#fbf1d6,#f2e2b8);
+    border-radius:8px;padding:38px 34px 30px;color:var(--ink);text-align:center;
+    box-shadow:0 0 0 4px var(--forest-dark),0 0 0 8px var(--gold),0 0 0 12px var(--forest-dark),0 24px 60px rgba(0,0,0,.6);
+  }
+  .cert .seal{margin:0 auto 6px;}
+  .cert .cert-kicker{letter-spacing:5px;text-transform:uppercase;font-size:.8rem;color:var(--forest-dark);font-weight:700;}
+  .cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2rem 0;color:var(--forest-dark);}
+  .cert .ribbon{color:var(--gold-deep);font-style:italic;margin:.1rem 0 1rem;}
+  .cert .awarded{font-size:.9rem;color:var(--ink-soft);margin:.2rem 0;}
+  .cert .name-input{
+    font-family:Georgia,serif;font-size:1.7rem;font-weight:700;text-align:center;color:var(--forest-dark);
+    border:none;border-bottom:3px dashed var(--gold-deep);background:transparent;width:90%;max-width:420px;margin:6px auto 4px;padding:4px 8px;display:block;
+  }
+  .cert .name-input:focus{outline:none;border-bottom-color:var(--rupee);}
+  .cert .name-hint{font-size:.72rem;color:var(--ink-soft);margin-bottom:14px;}
+  .cert .cert-body{font-size:1rem;line-height:1.6;margin:8px auto 16px;max-width:520px;}
+  .cert .cert-meta{display:flex;justify-content:space-between;gap:12px;margin:18px 24px 6px;font-size:.85rem;color:var(--ink-soft);}
+  .cert .cert-meta b{display:block;color:var(--forest-dark);border-top:2px solid var(--ink-soft);padding-top:4px;font-family:Georgia,serif;}
+  .cert-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;}
+  .cert-close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink-soft);}
+  .cert-close:hover{color:var(--heart);}
+  .confetti{position:fixed;top:-10px;width:9px;height:14px;z-index:85;pointer-events:none;border-radius:2px;}
+  @media (prefers-reduced-motion: reduce){ .confetti{display:none!important;} }
+
+  @media print{
+    body{background:#fff;}
+    body > *{visibility:hidden;}
+    .cert-backdrop, .cert-backdrop *{visibility:visible;}
+    .cert-backdrop{position:absolute;inset:0;background:#fff;display:flex!important;padding:0;}
+    .cert{box-shadow:0 0 0 3px #000, 0 0 0 7px #b8860b, 0 0 0 10px #000;}
+    .cert-actions,.cert-close{display:none!important;}
+  }
+
+  footer{max-width:1200px;margin:10px auto 40px;padding:0 16px;color:#bfe0b3;font-size:.82rem;text-align:center;}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topwrap">
+    <div class="brand">
+      <!-- little triforce -->
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true">
+        <polygon points="13,0 17,7 9,7" fill="#ffe14d"/>
+        <polygon points="8,9 12,16 4,16" fill="#ffe14d"/>
+        <polygon points="18,9 22,16 14,16" fill="#ffe14d"/>
+      </svg>
+      Code Quest
+    </div>
+    <div class="meter" aria-hidden="false">
+      <div class="meter-label"><span>Hero Progress</span><span id="pctText">0%</span></div>
+      <div class="hearts" id="hearts" aria-label="Progress hearts"></div>
+      <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+    <div class="rupees" title="One rupee for every quest you finish">
+      <svg width="14" height="18" viewBox="0 0 14 18" aria-hidden="true"><polygon points="7,0 14,5 14,13 7,18 0,13 0,5" fill="#37e07a" stroke="#0d5c27" stroke-width="1"/></svg>
+      <span id="rupeeCount">0</span> rupees
+    </div>
+    <button class="mute-btn" id="muteBtn" type="button" aria-pressed="false" title="Turn game sounds on or off">
+      <span id="muteIcon" aria-hidden="true"></span><span id="muteLabel">Sound</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar: the world map -->
+  <aside class="map pixel">
+    <h2>World Map</h2>
+    <div class="map-sub">Clear each dungeon to grow your hearts</div>
+    <ul class="quest" id="questList"></ul>
+    <button class="btn btn-gold trophy-btn" id="trophyBtn" type="button">&#127942; Trophy Room</button>
+    <div class="reset-row">
+      <button class="reset-btn" id="resetBtn">Start a new game (reset progress)</button>
+    </div>
+  </aside>
+
+  <!-- Main: the scroll -->
+  <main>
+    <section class="scroll pixel" id="scroll" aria-live="polite"></section>
+
+    <!-- Playground -->
+    <section class="pg pixel" aria-label="Code playground">
+      <div class="pg-head">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9l4-4 1.4 1.4L4.8 9l2.6 2.6L6 13 2 9zm14 0l-4 4-1.4-1.4L13.2 9l-2.6-2.6L12 5l4 4z" fill="#ffe14d"/></svg>
+          Magic Workshop (run your code)
+        </h3>
+        <div class="pg-actions">
+          <button class="btn btn-ghost" id="loadExample" type="button">Load example</button>
+          <button class="btn btn-ghost" id="resetCode" type="button">Reset code</button>
+          <button class="btn btn-green" id="runBtn" type="button">▶ Run</button>
+        </div>
+      </div>
+      <div class="pg-grid">
+        <div class="pg-pane">
+          <label for="editor">Your spellbook (type code here)</label>
+          <textarea id="editor" spellcheck="false" aria-label="Code editor"></textarea>
+        </div>
+        <div class="pg-pane">
+          <label>What happens (screen + messages)</label>
+          <iframe id="stage" class="pg-out" title="Code output" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <p class="pg-hint">Tip: click the game screen first so the arrow keys work. Your code and progress save by themselves — you can close this and come back later.</p>
+    </section>
+
+    <footer>Made for brave new game-makers. Everything runs on your own computer, even with no internet. 🗡️</footer>
+  </main>
+</div>
+
+<!-- Certificate of Completion -->
+<div class="cert-backdrop" id="certModal" role="dialog" aria-modal="true" aria-labelledby="certTitle">
+  <div class="cert">
+    <button class="cert-close" id="certClose" type="button" aria-label="Close certificate">&times;</button>
+    <svg class="seal" width="58" height="54" viewBox="0 0 58 54" aria-hidden="true">
+      <polygon points="29,2 39,19 19,19" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="18,22 28,39 8,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="40,22 50,39 30,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+    </svg>
+    <div class="cert-kicker">Hyrule Academy of Game-Making</div>
+    <h2 id="certTitle">Certificate of Completion</h2>
+    <div class="ribbon">~ Master Game-Maker ~</div>
+    <div class="awarded">This heroic certificate is proudly awarded to</div>
+    <input class="name-input" id="heroNameInput" type="text" maxlength="28" aria-label="Your name" placeholder="Type your name">
+    <div class="name-hint">(click your name to change it — it saves automatically)</div>
+    <p class="cert-body" id="certBody"></p>
+    <div class="cert-meta">
+      <div>Date<b id="certDate">—</b></div>
+      <div>Rank<b>Master Game-Maker</b></div>
+      <div>Hearts<b id="certHearts">15 / 15</b></div>
+    </div>
+    <div class="cert-actions">
+      <button class="btn btn-gold" id="certPrint" type="button">&#128424; Print / Save as PDF</button>
+      <button class="btn btn-green" id="certReplay" type="button">&#9835; Play fanfare</button>
+      <button class="btn btn-ghost" id="certCloseBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+/* ============================================================
+   CODE QUEST — single-file offline course
+   All data + logic below. No network, no dependencies.
+   ============================================================ */
+
+/* ============================================================
+   LEVEL CONFIG — every level fills this in. See STANDARDS.md §10.
+   ============================================================ */
+const LEVEL = {
+  number: 2,
+  id: "l2-combat",
+  title: "Code Quest · Level 2 — The Monsters Awaken",
+  subtitle: "Combat & Enemies",
+  saveKey: "codequest_L2_v1",
+  certBody: "For bravely clearing every dungeon of <b>Level 2: The Monsters Awaken</b> — "
+    + "mastering pixel sprites, enemy objects, arrays of monsters, health &amp; damage, "
+    + "chasing enemies, hurt cooldowns, and sword combat — and building a full battle arena "
+    + "where the hero fights off a horde and clears the room. A true game-maker!"
+};
+document.title = LEVEL.title;
+
+/* ---------- helper for defining a "hard word" tooltip ---------- */
+function W(word, meaning){
+  return '<span class="word" data-tip="'+meaning.replace(/"/g,'&quot;')+'">'+word+'</span>';
+}
+
+/* ---------- The curriculum ---------- */
+/* Each topic: title, sub, lesson(html), model, mistakes[], exercise{intro, starter}, summary */
+const TOPICS = [
+{
+  id:"sprites",
+  title:"Pixels Come Alive",
+  sub:"Sprites from arrays",
+  lesson:
+    "<p>In Level 1 your hero was one plain square. Time to level up! A "+W("sprite","a small game picture, here built from a grid of colored squares")+" "+
+    "is a tiny picture made of colored dots. And here is the cool part: a sprite is just an "+
+    "<b>array</b> — the same list you learned in Level 1!</p>"+
+    "<p>Each row is a string of letters. Each letter is a color: <code>g</code> is green, "+
+    "<code>k</code> is black, and <code>.</code> means see-through (draw nothing).</p>"+
+    "<pre><code>const slimeSprite = [\n  \"..gggg..\",\n  \".gggggg.\",\n  \"gggggggg\"\n];</code></pre>"+
+    "<p>The workshop gives you two helpers for free: <code>PALETTE</code> (the "+W("color map","a list that says which color each letter stands for")+") "+
+    "and <code>drawSprite</code>, which loops through the grid and stamps each colored dot onto the screen:</p>"+
+    "<pre><code>drawSprite(slimeSprite, 100, 100, 8, PALETTE);\n// sprite, x, y, how-big-each-dot-is, colors</code></pre>"+
+    "<p>Behind the scenes <code>drawSprite</code> uses a loop inside a loop — one for rows, one "+
+    "for the letters in each row. You already know how to do that!</p>",
+  model:"A sprite is colored graph paper. Each letter is one square; drawSprite stamps the whole grid onto the canvas.",
+  mistakes:[
+    "Rows of different lengths. Keep every row the same number of letters.",
+    "Forgetting the <code>.</code> for see-through spots, so your creature is one solid blob.",
+    "Using a letter that is not in <code>PALETTE</code> — that dot just won't show up."
+  ],
+  exercise:{
+    intro:"Run it to meet a slime. Then change some letters to invent your own creature. Try <code>r</code> for red or <code>b</code> for blue, and make it bigger by raising the <code>8</code>.",
+    starter:'const slimeSprite = [\n  "........",\n  "..gggg..",\n  ".gggggg.",\n  "ggkggkgg",\n  "gggggggg",\n  ".gGGGGg."\n];\n\n// grass background\nctx.fillStyle = "#4c9a2a";\nctx.fillRect(0, 0, 320, 320);\n\ndrawSprite(slimeSprite, 120, 120, 8, PALETTE);\nconsole.log("A wild slime appears! Change the letters to remix it.");'
+  },
+  summary:"A sprite is an array of rows of color letters. drawSprite(sprite, x, y, dotSize, PALETTE) paints it. It's arrays and loops from Level 1, now making pictures."
+},
+{
+  id:"facing",
+  title:"Which Way, Hero?",
+  sub:"Facing four directions",
+  lesson:
+    "<p>A real hero looks the way they walk. So we make <b>four</b> sprites — one for each "+
+    "direction — and keep them together in an object (from Level 1!):</p>"+
+    "<pre><code>const heroSprites = {\n  down: heroDown,\n  up: heroUp,\n  left: heroLeft,\n  right: heroRight\n};</code></pre>"+
+    "<p>We remember which way the hero currently looks in a property called <code>facing</code>:</p>"+
+    "<pre><code>let hero = { facing: \"down\" };</code></pre>"+
+    "<p>Now to draw the right picture we just look it up with the facing as the key:</p>"+
+    "<pre><code>drawSprite(heroSprites[hero.facing], 100, 100, 8, PALETTE);</code></pre>"+
+    "<p>When a key is pressed we change <code>facing</code> (this is the "+W("event listener","code that waits for something to happen, like a key press, then runs")+" you learned in Level 1). Same idea, new use.</p>",
+  model:"heroSprites is a wardrobe with four outfits. hero.facing is the label that picks which outfit to wear right now.",
+  mistakes:[
+    "Forgetting to click the game screen first, so the keys are not heard.",
+    "Spelling a direction differently in two places — <code>\"up\"</code> must match everywhere.",
+    "Looking up a facing that has no sprite, like <code>heroSprites[\"north\"]</code> — use the four you made."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press the arrow keys to turn your hero. Notice the sprite changes to face the way you press.",
+    starter:'const heroDown  = ["..nnnn..",".nnnnnn.",".ssssss.",".sk..ks.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroUp    = ["..nnnn..",".nnnnnn.",".nnnnnn.",".nnnnnn.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroLeft  = ["..nnnn..",".nnnnnn.",".ssssnn.","ksssss..",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroRight = ["..nnnn..",".nnnnnn.",".nnssss.","..sssssk",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\n\nlet hero = { facing: "down" };\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === "ArrowUp")    hero.facing = "up";\n  if (event.key === "ArrowDown")  hero.facing = "down";\n  if (event.key === "ArrowLeft")  hero.facing = "left";\n  if (event.key === "ArrowRight") hero.facing = "right";\n});\n\nfunction draw() {\n  ctx.fillStyle = "#4c9a2a";\n  ctx.fillRect(0, 0, 320, 320);\n  drawSprite(heroSprites[hero.facing], 128, 120, 8, PALETTE);\n  ctx.fillStyle = "#fff";\n  ctx.font = "14px monospace";\n  ctx.fillText("Facing: " + hero.facing, 8, 24);\n  requestAnimationFrame(draw);\n}\ndraw();\nconsole.log("Click the screen, then press the arrow keys to turn!");'
+  },
+  summary:"Store four sprites in an object keyed by direction. hero.facing picks which to draw. Key events change facing — objects + events working together."
+},
+{
+  id:"enemy-object",
+  title:"Meet the Monster",
+  sub:"The enemy object",
+  lesson:
+    "<p>An enemy is not just a picture — it has facts: where it is, how much "+W("health","how many hits something can take before it is defeated")+" "+
+    "it has, and what it looks like. That is a job for an <b>object</b> (Level 1!). We bundle "+
+    "all the facts together:</p>"+
+    "<pre><code>let slime = {\n  x: 140,\n  y: 120,\n  health: 3,\n  sprite: slimeSprite\n};</code></pre>"+
+    "<p>Now everything about that slime lives in one tidy box. We reach any fact with a dot:</p>"+
+    "<pre><code>drawSprite(slime.sprite, slime.x, slime.y, 6, PALETTE);\nslime.health = slime.health - 1;   // it took a hit!</code></pre>"+
+    "<p>Giving each enemy its own object is the secret that lets us have <i>lots</i> of enemies "+
+    "next — each one keeping track of itself.</p>",
+  model:"An enemy object is a monster's ID card: name a fact (x, y, health, sprite) and its value sits right next to it.",
+  mistakes:[
+    "Using a fact you never added — <code>slime.speed</code> is <code>undefined</code> until you put it in the object.",
+    "Forgetting commas between the facts inside the <code>{ }</code>.",
+    "Mixing up the dot for objects (<code>slime.health</code>) with the brackets for arrays."
+  ],
+  exercise:{
+    intro:"Run it to draw a slime from an object, then hit it. Watch its <code>health</code> drop in the messages. Try changing its starting <code>x</code> and <code>y</code>.",
+    starter:'const slimeSprite = ["........","..gggg..",".gggggg.","ggkggkgg","gggggggg",".gGGGGg."];\n\nlet slime = {\n  x: 130,\n  y: 120,\n  health: 3,\n  sprite: slimeSprite\n};\n\nctx.fillStyle = "#4c9a2a";\nctx.fillRect(0, 0, 320, 320);\ndrawSprite(slime.sprite, slime.x, slime.y, 8, PALETTE);\n\nconsole.log("Slime at", slime.x, slime.y, "with health", slime.health);\n\nslime.health = slime.health - 1;   // whack!\nconsole.log("After one hit, health is", slime.health);'
+  },
+  summary:"An enemy is an object holding its own facts (x, y, health, sprite). Reach them with a dot. One object per monster keeps each one organized."
+},
+{
+  id:"enemy-array",
+  title:"Here Comes the Horde",
+  sub:"An army of enemies in a loop",
+  lesson:
+    "<p>One slime is lonely. A real dungeon has many! Instead of a separate variable for each, "+
+    "we keep them all in one <b>array</b> — a list of enemy objects:</p>"+
+    "<pre><code>let enemies = [\n  { x: 40,  y: 40,  health: 2 },\n  { x: 200, y: 60,  health: 2 },\n  { x: 120, y: 200, health: 2 }\n];</code></pre>"+
+    "<p>Now a single <b>loop</b> can draw the whole horde. This is arrays and loops from Level 1, "+
+    "teaming up:</p>"+
+    "<pre><code>for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n  const enemy = enemies[enemyIndex];\n  drawSprite(slimeSprite, enemy.x, enemy.y, 6, PALETTE);\n}</code></pre>"+
+    "<p>Notice the readable name <code>enemyIndex</code> instead of a lonely <code>i</code> — it "+
+    "tells the reader exactly what the loop is counting. Add a hundred enemies and this same loop "+
+    "still draws them all.</p>",
+  model:"The enemies array is a lineup of monsters. The loop walks down the line and draws each one in turn.",
+  mistakes:[
+    "Writing <code>enemies[enemyIndex].x</code> before checking the loop stops at <code>enemies.length</code>.",
+    "Starting the count at 1 instead of 0 — the first enemy is <code>enemies[0]</code>.",
+    "Naming the counter just <code>i</code>. Say what it counts: <code>enemyIndex</code>."
+  ],
+  exercise:{
+    intro:"Run it to draw a whole horde with one loop. Then add another enemy to the list, or change their positions, and run again.",
+    starter:'const slimeSprite = ["........","..gggg..",".gggggg.","ggkggkgg","gggggggg",".gGGGGg."];\n\nlet enemies = [\n  { x: 40,  y: 40,  health: 2 },\n  { x: 210, y: 60,  health: 2 },\n  { x: 120, y: 210, health: 2 },\n  { x: 240, y: 230, health: 2 }\n];\n\nctx.fillStyle = "#4c9a2a";\nctx.fillRect(0, 0, 320, 320);\n\nfor (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n  const enemy = enemies[enemyIndex];\n  drawSprite(slimeSprite, enemy.x, enemy.y, 6, PALETTE);\n}\n\nconsole.log("Drew " + enemies.length + " slimes with a single loop!");'
+  },
+  summary:"Keep many enemies in one array of objects, then use one loop over enemies.length to handle them all. Name the counter clearly: enemyIndex."
+},
+{
+  id:"hearts",
+  title:"Hearts on the Line",
+  sub:"Health & damage",
+  lesson:
+    "<p>Fighting only matters if the hero can get hurt. We track the hero's health in a number "+
+    "and draw it as hearts at the top of the screen — the "+W("HUD","heads-up display: the score, hearts, and info drawn on top of the game")+".</p>"+
+    "<pre><code>let heroHealth = 3;\nconst MAX_HEALTH = 3;</code></pre>"+
+    "<p>A small function handles taking damage, and never lets health go below zero:</p>"+
+    "<pre><code>function takeDamage(amount) {\n  heroHealth = heroHealth - amount;\n  if (heroHealth < 0) heroHealth = 0;\n}</code></pre>"+
+    "<p>To draw the hearts we loop <code>MAX_HEALTH</code> times. Full hearts are red, empty ones "+
+    "are grey — so color is not the <i>only</i> clue, the count is too:</p>"+
+    "<pre><code>for (let heartIndex = 0; heartIndex < MAX_HEALTH; heartIndex++) {\n  const isFull = heartIndex < heroHealth;\n  ctx.fillStyle = isFull ? \"#e23b3b\" : \"#5a3a3a\";\n  ctx.fillRect(8 + heartIndex * 22, 8, 16, 16);\n}</code></pre>",
+  model:"heroHealth is a stack of hearts. Taking damage removes one from the top; the HUD loop redraws the stack.",
+  mistakes:[
+    "Letting health go negative. Clamp it: <code>if (heroHealth < 0) heroHealth = 0;</code>.",
+    "Forgetting to redraw the hearts after damage, so the screen lies about your health.",
+    "Using only color for full vs empty. Position and count help too (good for everyone)."
+  ],
+  exercise:{
+    intro:"Run it to see three hearts, then one is lost to damage. Change how much damage <code>takeDamage</code> deals, or raise <code>MAX_HEALTH</code>, and run again.",
+    starter:'let heroHealth = 3;\nconst MAX_HEALTH = 3;\n\nfunction takeDamage(amount) {\n  heroHealth = heroHealth - amount;\n  if (heroHealth < 0) heroHealth = 0;\n}\n\nfunction drawHearts() {\n  for (let heartIndex = 0; heartIndex < MAX_HEALTH; heartIndex++) {\n    const isFull = heartIndex < heroHealth;\n    ctx.fillStyle = isFull ? "#e23b3b" : "#5a3a3a";\n    ctx.fillRect(8 + heartIndex * 22, 8, 16, 16);\n  }\n}\n\nctx.fillStyle = "#2e5d34";\nctx.fillRect(0, 0, 320, 320);\n\ntakeDamage(1);   // ouch!\ndrawHearts();\nconsole.log("Hero health is now", heroHealth);'
+  },
+  summary:"Track health in a number and draw it as a HUD with a loop. A takeDamage function lowers it and clamps at 0. Show full vs empty by count and color."
+},
+{
+  id:"chase",
+  title:"The Hunt Begins",
+  sub:"Enemies that chase",
+  lesson:
+    "<p>Right now enemies just sit there. Let's give them a tiny brain: each frame, step a little "+
+    "closer to the hero. This simple "+W("AI","artificial intelligence: code that makes a game character act on its own")+" "+
+    "compares positions and nudges the enemy the right way.</p>"+
+    "<pre><code>function moveEnemiesTowardHero() {\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    if (enemy.x < hero.x) enemy.x = enemy.x + ENEMY_SPEED;\n    if (enemy.x > hero.x) enemy.x = enemy.x - ENEMY_SPEED;\n    if (enemy.y < hero.y) enemy.y = enemy.y + ENEMY_SPEED;\n    if (enemy.y > hero.y) enemy.y = enemy.y - ENEMY_SPEED;\n  }\n}</code></pre>"+
+    "<p>Read it in plain English: <i>if the enemy is left of the hero, step right; if above, step "+
+    "down.</i> Do that every frame inside the game loop and the horde creeps toward you. "+
+    "<code>ENEMY_SPEED</code> is how big each step is — small numbers feel smooth.</p>",
+  model:"Each enemy plays 'warmer/colder': every frame it takes one small step in the direction of the hero.",
+  mistakes:[
+    "A big <code>ENEMY_SPEED</code> makes enemies teleport and jitter. Keep steps small (1 or 2).",
+    "Calling the move function once instead of every frame — put it inside the game loop.",
+    "Comparing to the wrong thing. Enemies chase <code>hero.x</code> and <code>hero.y</code>."
+  ],
+  exercise:{
+    intro:"Run it and watch the slimes hunt the gold hero. Move the hero's start position, or change <code>ENEMY_SPEED</code>, and see how the chase feels.",
+    starter:'const slimeSprite = ["........","..gggg..",".gggggg.","ggkggkgg","gggggggg",".gGGGGg."];\nconst ENEMY_SPEED = 1;\n\nlet hero = { x: 150, y: 150 };\nlet enemies = [ { x: 20, y: 20 }, { x: 270, y: 40 }, { x: 40, y: 260 } ];\n\nfunction moveEnemiesTowardHero() {\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    if (enemy.x < hero.x) enemy.x = enemy.x + ENEMY_SPEED;\n    if (enemy.x > hero.x) enemy.x = enemy.x - ENEMY_SPEED;\n    if (enemy.y < hero.y) enemy.y = enemy.y + ENEMY_SPEED;\n    if (enemy.y > hero.y) enemy.y = enemy.y - ENEMY_SPEED;\n  }\n}\n\nfunction draw() {\n  ctx.fillStyle = "#4c9a2a";\n  ctx.fillRect(0, 0, 320, 320);\n  moveEnemiesTowardHero();\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    drawSprite(slimeSprite, enemies[enemyIndex].x, enemies[enemyIndex].y, 6, PALETTE);\n  }\n  ctx.fillStyle = "#ffd700";\n  ctx.fillRect(hero.x, hero.y, 20, 20);\n  requestAnimationFrame(draw);\n}\ndraw();\nconsole.log("The slimes are hunting the hero!");'
+  },
+  summary:"Give enemies a simple brain: each frame step toward the hero by comparing x and y. Run it inside the game loop. Keep ENEMY_SPEED small for smooth chasing."
+},
+{
+  id:"touch-damage",
+  title:"Don't Touch That!",
+  sub:"Touch damage & cooldown",
+  lesson:
+    "<p>When an enemy touches the hero, the hero should lose a heart. We already know how to check "+
+    "if two boxes overlap (Level 1 collision!):</p>"+
+    "<pre><code>function isTouching(a, b) {\n  return a.x < b.x + b.width &&\n         a.x + a.width > b.x &&\n         a.y < b.y + b.height &&\n         a.y + a.height > b.y;\n}</code></pre>"+
+    "<p>But there is a trap: the game loop runs ~60 times a second. If touching cost a heart every "+
+    "frame, you'd lose all your hearts instantly! The fix is a "+W("cooldown","a short wait before something can happen again")+" — "+
+    "after getting hurt, the hero is safe for a moment:</p>"+
+    "<pre><code>if (hurtCooldown > 0) hurtCooldown = hurtCooldown - 1;\n\nif (hurtCooldown === 0 && isTouching(hero, enemy)) {\n  heroHealth = heroHealth - 1;\n  hurtCooldown = 60;   // safe for about 1 second\n}</code></pre>"+
+    "<p><code>hurtCooldown</code> counts down each frame. Only when it hits 0 can the hero be hurt "+
+    "again. This is how flashing 'invincible' moments work in real games.</p>",
+  model:"A cooldown is a kitchen timer. Get hurt, start the timer; you can't be hurt again until it rings (reaches 0).",
+  mistakes:[
+    "No cooldown, so one touch drains every heart in a blink.",
+    "Forgetting to count the timer down each frame, so it never reaches 0 again.",
+    "Setting the cooldown but checking <code>&gt;</code> instead of <code>=== 0</code> before hurting."
+  ],
+  exercise:{
+    intro:"This runs 130 pretend frames with an enemy sitting on the hero. Watch how the cooldown lets you lose only a couple of hearts, not all at once. Change <code>60</code> to <code>20</code> and re-run to feel the difference.",
+    starter:'let hero  = { x: 150, y: 150, width: 24, height: 24 };\nlet enemy = { x: 150, y: 150, width: 16, height: 16 };\nlet heroHealth = 3;\nlet hurtCooldown = 0;\n\nfunction isTouching(a, b) {\n  return a.x < b.x + b.width &&\n         a.x + a.width > b.x &&\n         a.y < b.y + b.height &&\n         a.y + a.height > b.y;\n}\n\nfunction update() {\n  if (hurtCooldown > 0) hurtCooldown = hurtCooldown - 1;\n  if (hurtCooldown === 0 && isTouching(hero, enemy)) {\n    heroHealth = heroHealth - 1;\n    hurtCooldown = 60;\n    console.log("Ouch! Health is now " + heroHealth);\n  }\n}\n\nfor (let frame = 0; frame < 130; frame++) update();\nconsole.log("Cooldown saved you from losing every heart at once.");'
+  },
+  summary:"Touch damage uses box overlap. A cooldown timer that counts down each frame stops the hero losing every heart in one touch — the classic 'invincible flash'."
+},
+{
+  id:"attack",
+  title:"Swing Your Sword",
+  sub:"Attacking & defeating enemies",
+  lesson:
+    "<p>Time to fight back! When the hero attacks, we make an invisible box — the "+W("hitbox","an invisible box that decides what an attack can reach")+" — "+
+    "just in front of the hero, in the way they are facing:</p>"+
+    "<pre><code>function getSwordHitbox() {\n  const REACH = 22;\n  if (hero.facing === \"right\") return { x: hero.x + hero.size, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === \"left\")  return { x: hero.x - REACH, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === \"up\")    return { x: hero.x, y: hero.y - REACH, width: hero.size, height: REACH };\n  return { x: hero.x, y: hero.y + hero.size, width: hero.size, height: REACH };\n}</code></pre>"+
+    "<p>Any enemy touching that box takes a hit. When an enemy's health reaches 0, we remove it "+
+    "from the array with <code>splice</code>. Notice we loop <b>backwards</b> so removing one "+
+    "enemy doesn't skip the next:</p>"+
+    "<pre><code>for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {\n  const enemy = enemies[enemyIndex];\n  if (isTouching(sword, enemy)) {\n    enemy.health = enemy.health - 1;\n    if (enemy.health <= 0) enemies.splice(enemyIndex, 1);\n  }\n}</code></pre>",
+  model:"An attack is a quick invisible box in front of the hero. Any monster caught in the box gets hurt; at 0 health it leaves the lineup.",
+  mistakes:[
+    "Looping forwards while removing enemies — that skips one. Loop backwards when you <code>splice</code>.",
+    "Building the hitbox in the wrong direction. It should sit in front of <code>hero.facing</code>.",
+    "Forgetting <code>enemy.health &lt;= 0</code> lets an enemy live at 0 health."
+  ],
+  exercise:{
+    intro:"This swings the sword twice at a 2-health enemy. Watch it get hit, then defeated and removed from the list. Change the enemy's <code>health</code> to 3 and see how many swings it takes.",
+    starter:'let hero = { x: 140, y: 140, size: 24, facing: "right" };\nlet enemies = [ { x: 175, y: 142, size: 20, health: 2 } ];\n\nfunction isTouching(a, b) {\n  return a.x < b.x + b.width &&\n         a.x + a.width > b.x &&\n         a.y < b.y + b.height &&\n         a.y + a.height > b.y;\n}\n\nfunction getSwordHitbox() {\n  const REACH = 22;\n  if (hero.facing === "right") return { x: hero.x + hero.size, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "left")  return { x: hero.x - REACH, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "up")    return { x: hero.x, y: hero.y - REACH, width: hero.size, height: REACH };\n  return { x: hero.x, y: hero.y + hero.size, width: hero.size, height: REACH };\n}\n\nfunction attack() {\n  const sword = getSwordHitbox();\n  for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {\n    const enemy = enemies[enemyIndex];\n    if (isTouching(sword, enemy)) {\n      enemy.health = enemy.health - 1;\n      console.log("Hit! Enemy health is now " + enemy.health);\n      if (enemy.health <= 0) {\n        enemies.splice(enemyIndex, 1);\n        console.log("Enemy defeated!");\n      }\n    }\n  }\n}\n\nattack();\nattack();\nconsole.log("Enemies left: " + enemies.length);'
+  },
+  summary:"An attack is a hitbox in front of hero.facing. Enemies it touches lose health; at 0 they are spliced out. Loop backwards when removing from an array."
+},
+{
+  id:"final-1",
+  title:"Final Quest · Step 1",
+  sub:"Enter the arena",
+  isFinal:true,
+  lesson:
+    "<p>&#127894; <b>The Final Quest of Level 2 begins!</b> Over three steps you will build the "+
+    "re-envisioned game: a real sprite hero, a room full of monsters, sword fighting, and a "+
+    "'clear the room' victory.</p>"+
+    "<p><b>Step 1: enter the arena.</b> We put it all together — a tiled room, the four-direction "+
+    "sprite hero, and smooth movement while a key is <i>held down</i>. To do that we remember which "+
+    "keys are held in an object called <code>keysHeld</code>, and move a little every frame.</p>"+
+    "<p>We also keep the hero inside the stone walls, using the clamping idea from Level 1.</p>",
+  model:"Hold-to-move: keydown flips a key 'on' in keysHeld, keyup flips it 'off', and every frame the loop moves the hero for whichever keys are on.",
+  mistakes:[
+    "Forgetting to click the game screen first, so no keys are heard.",
+    "Only moving on keydown — holding a key then feels jumpy. Move every frame based on keysHeld.",
+    "Skipping the wall clamp, so the hero walks off into the void."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and walk your sprite hero around the arena with the arrow keys. Next step: the monsters wake up!",
+    starter:'const TILE_SIZE = 32;\nconst arena = [\n  [1,1,1,1,1,1,1,1,1,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],\n  [1,1,1,1,1,1,1,1,1,1]\n];\n\nconst heroDown  = ["..nnnn..",".nnnnnn.",".ssssss.",".sk..ks.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroUp    = ["..nnnn..",".nnnnnn.",".nnnnnn.",".nnnnnn.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroLeft  = ["..nnnn..",".nnnnnn.",".ssssnn.","ksssss..",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroRight = ["..nnnn..",".nnnnnn.",".nnssss.","..sssssk",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\n\nlet hero = { x: 150, y: 150, size: 24, speed: 2, facing: "down" };\nlet keysHeld = {};\n\nwindow.addEventListener("keydown", function(event) { keysHeld[event.key] = true; });\nwindow.addEventListener("keyup",   function(event) { keysHeld[event.key] = false; });\n\nfunction moveHero() {\n  let moveX = 0;\n  let moveY = 0;\n  if (keysHeld["ArrowLeft"])  { moveX = -hero.speed; hero.facing = "left"; }\n  if (keysHeld["ArrowRight"]) { moveX =  hero.speed; hero.facing = "right"; }\n  if (keysHeld["ArrowUp"])    { moveY = -hero.speed; hero.facing = "up"; }\n  if (keysHeld["ArrowDown"])  { moveY =  hero.speed; hero.facing = "down"; }\n\n  const nextX = hero.x + moveX;\n  const nextY = hero.y + moveY;\n  if (nextX > TILE_SIZE && nextX + hero.size < 320 - TILE_SIZE) hero.x = nextX;\n  if (nextY > TILE_SIZE && nextY + hero.size < 320 - TILE_SIZE) hero.y = nextY;\n}\n\nfunction drawArena() {\n  for (let rowIndex = 0; rowIndex < arena.length; rowIndex++) {\n    for (let colIndex = 0; colIndex < arena[rowIndex].length; colIndex++) {\n      ctx.fillStyle = arena[rowIndex][colIndex] === 1 ? "#5b3a1a" : "#4c9a2a";\n      ctx.fillRect(colIndex * TILE_SIZE, rowIndex * TILE_SIZE, TILE_SIZE, TILE_SIZE);\n    }\n  }\n}\n\nfunction gameLoop() {\n  moveHero();\n  drawArena();\n  drawSprite(heroSprites[hero.facing], hero.x, hero.y, 3, PALETTE);\n  requestAnimationFrame(gameLoop);\n}\ngameLoop();\nconsole.log("Click the screen, then walk with the arrow keys!");'
+  },
+  summary:"The arena assembles the tilemap, the four-direction sprite hero, hold-to-move with keysHeld, and wall clamping — the foundation the battle is built on."
+},
+{
+  id:"final-2",
+  title:"Final Quest · Step 2",
+  sub:"The monsters awaken",
+  isFinal:true,
+  lesson:
+    "<p><b>Step 2: the monsters awaken.</b> We add an <code>enemies</code> array of slimes that "+
+    "<b>chase</b> the hero, deal <b>touch damage</b> with a cooldown, and a <b>hearts HUD</b>. If "+
+    "the hero runs out of hearts, it's game over.</p>"+
+    "<p>Everything here you already built in the earlier dungeons — now they run together inside "+
+    "one game loop: move the hero, move the enemies, check for hurt, draw everyone, draw the hearts.</p>",
+  model:"The game loop is a stage manager: each frame it cues the hero, the enemies, the damage check, and the HUD, in order.",
+  mistakes:[
+    "Forgetting the hurt cooldown, so touching a slime drains all hearts at once.",
+    "Drawing the hearts under the arena, where you can't see them — draw the HUD last, on top.",
+    "Not stopping the action at 0 health, so 'game over' never really happens."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and survive! Slimes chase you and cost a heart on touch. Lose all three and it's game over. Next step: fight back!",
+    starter:'const TILE_SIZE = 32;\nconst arena = [\n  [1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,1,1,1,1,1,1,1,1,1]\n];\nconst heroDown  = ["..nnnn..",".nnnnnn.",".ssssss.",".sk..ks.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroUp    = ["..nnnn..",".nnnnnn.",".nnnnnn.",".nnnnnn.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroLeft  = ["..nnnn..",".nnnnnn.",".ssssnn.","ksssss..",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroRight = ["..nnnn..",".nnnnnn.",".nnssss.","..sssssk",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\nconst slimeSprite = ["........","..gggg..",".gggggg.","ggkggkgg","gggggggg",".gGGGGg."];\n\nlet hero = { x: 150, y: 150, size: 24, speed: 2, facing: "down" };\nlet heroHealth = 3;\nconst MAX_HEALTH = 3;\nlet hurtCooldown = 0;\nlet gameOver = false;\nlet keysHeld = {};\n\nlet enemies = [\n  { x: 48,  y: 48,  size: 20, speed: 1, health: 2 },\n  { x: 250, y: 60,  size: 20, speed: 1, health: 2 },\n  { x: 60,  y: 250, size: 20, speed: 1, health: 2 },\n  { x: 250, y: 250, size: 20, speed: 1, health: 2 }\n];\n\nwindow.addEventListener("keydown", function(event) { keysHeld[event.key] = true; });\nwindow.addEventListener("keyup",   function(event) { keysHeld[event.key] = false; });\n\nfunction isTouching(a, b) {\n  return a.x < b.x + b.size && a.x + a.size > b.x && a.y < b.y + b.size && a.y + a.size > b.y;\n}\n\nfunction moveHero() {\n  let moveX = 0, moveY = 0;\n  if (keysHeld["ArrowLeft"])  { moveX = -hero.speed; hero.facing = "left"; }\n  if (keysHeld["ArrowRight"]) { moveX =  hero.speed; hero.facing = "right"; }\n  if (keysHeld["ArrowUp"])    { moveY = -hero.speed; hero.facing = "up"; }\n  if (keysHeld["ArrowDown"])  { moveY =  hero.speed; hero.facing = "down"; }\n  const nextX = hero.x + moveX, nextY = hero.y + moveY;\n  if (nextX > TILE_SIZE && nextX + hero.size < 320 - TILE_SIZE) hero.x = nextX;\n  if (nextY > TILE_SIZE && nextY + hero.size < 320 - TILE_SIZE) hero.y = nextY;\n}\n\nfunction moveEnemies() {\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    if (enemy.x < hero.x) enemy.x = enemy.x + enemy.speed;\n    if (enemy.x > hero.x) enemy.x = enemy.x - enemy.speed;\n    if (enemy.y < hero.y) enemy.y = enemy.y + enemy.speed;\n    if (enemy.y > hero.y) enemy.y = enemy.y - enemy.speed;\n  }\n}\n\nfunction checkHurt() {\n  if (hurtCooldown > 0) hurtCooldown = hurtCooldown - 1;\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    if (hurtCooldown === 0 && isTouching(hero, enemies[enemyIndex])) {\n      heroHealth = heroHealth - 1;\n      hurtCooldown = 60;\n      if (heroHealth <= 0) { heroHealth = 0; gameOver = true; }\n    }\n  }\n}\n\nfunction drawArena() {\n  for (let rowIndex = 0; rowIndex < arena.length; rowIndex++)\n    for (let colIndex = 0; colIndex < arena[rowIndex].length; colIndex++) {\n      ctx.fillStyle = arena[rowIndex][colIndex] === 1 ? "#5b3a1a" : "#4c9a2a";\n      ctx.fillRect(colIndex * TILE_SIZE, rowIndex * TILE_SIZE, TILE_SIZE, TILE_SIZE);\n    }\n}\n\nfunction drawHearts() {\n  for (let heartIndex = 0; heartIndex < MAX_HEALTH; heartIndex++) {\n    ctx.fillStyle = heartIndex < heroHealth ? "#e23b3b" : "#5a3a3a";\n    ctx.fillRect(8 + heartIndex * 22, 8, 16, 16);\n  }\n}\n\nfunction gameLoop() {\n  if (!gameOver) {\n    moveHero();\n    moveEnemies();\n    checkHurt();\n  }\n  drawArena();\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++)\n    drawSprite(slimeSprite, enemies[enemyIndex].x, enemies[enemyIndex].y, 3, PALETTE);\n  drawSprite(heroSprites[hero.facing], hero.x, hero.y, 3, PALETTE);\n  drawHearts();\n  if (gameOver) {\n    ctx.fillStyle = "rgba(0,0,0,.6)";\n    ctx.fillRect(0, 130, 320, 60);\n    ctx.fillStyle = "#ff6b6b";\n    ctx.font = "22px monospace";\n    ctx.fillText("GAME OVER", 95, 168);\n  }\n  requestAnimationFrame(gameLoop);\n}\ngameLoop();\nconsole.log("Click the screen and survive the slimes!");'
+  },
+  summary:"Step 2 wakes the monsters: an enemies array that chases, touch damage with a cooldown, a hearts HUD drawn on top, and a game-over state — all cued by one game loop."
+},
+{
+  id:"final-3",
+  title:"Final Quest · Step 3",
+  sub:"Hero's victory",
+  isFinal:true,
+  lesson:
+    "<p><b>Step 3: fight back and win!</b> We add the <b>sword</b> (press the <b>space bar</b>), so "+
+    "the hero can defeat enemies. Each defeat gives a reward — <b>rupees</b> and "+W("XP","experience points: a score that shows how much your hero has battled and grown")+" — "+
+    "shown on the HUD. Clear every monster and you get <b>ROOM CLEARED!</b></p>"+
+    "<p>This is the whole Level 2 game in one place: sprites, objects, arrays, the game loop, "+
+    "chasing AI, health & cooldown, and sword combat with a win condition. You built every piece "+
+    "in the dungeons before this — now they're one game.</p>"+
+    "<p><b>Your mission:</b> defeat all the slimes without losing your three hearts. Then tinker — "+
+    "add more enemies, make the sword reach farther, or speed up the hero. It's your game now!</p>",
+  model:"A finished level = a world + a hero who can act + enemies who react + a way to win. Every system you learned is one gear in that machine.",
+  mistakes:[
+    "Attacking every single frame while space is held. Use a short attack timer so each swing is one hit.",
+    "Forgetting to check for the win (no enemies left) — the player never learns they won.",
+    "Rewarding before the enemy is actually defeated. Give rupees/XP only when health reaches 0."
+  ],
+  exercise:{
+    intro:"THE BATTLE. Run it, click the screen, move with the arrows, and press SPACE to swing your sword. Defeat all four slimes to clear the room — then make it your own!",
+    starter:'const TILE_SIZE = 32;\nconst arena = [\n  [1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],\n  [1,1,1,1,1,1,1,1,1,1]\n];\nconst heroDown  = ["..nnnn..",".nnnnnn.",".ssssss.",".sk..ks.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroUp    = ["..nnnn..",".nnnnnn.",".nnnnnn.",".nnnnnn.",".ssssss.","gggggggg","sggggggs",".gggggg.",".n.nn.n."];\nconst heroLeft  = ["..nnnn..",".nnnnnn.",".ssssnn.","ksssss..",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroRight = ["..nnnn..",".nnnnnn.",".nnssss.","..sssssk",".ssssss.","gggggggg",".gggggg.",".gggggg.",".n.nn.n."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\nconst slimeSprite = ["........","..gggg..",".gggggg.","ggkggkgg","gggggggg",".gGGGGg."];\n\nlet hero = { x: 150, y: 150, size: 24, speed: 2, facing: "down" };\nlet heroHealth = 3;\nconst MAX_HEALTH = 3;\nlet hurtCooldown = 0;\nlet attackTimer = 0;\nlet rupees = 0;\nlet experience = 0;\nlet gameOver = false;\nlet roomCleared = false;\nlet keysHeld = {};\n\nlet enemies = [\n  { x: 48,  y: 48,  size: 20, speed: 1, health: 2 },\n  { x: 250, y: 60,  size: 20, speed: 1, health: 2 },\n  { x: 60,  y: 250, size: 20, speed: 1, health: 2 },\n  { x: 250, y: 250, size: 20, speed: 1, health: 2 }\n];\n\nwindow.addEventListener("keyup", function(event) { keysHeld[event.key] = false; });\nwindow.addEventListener("keydown", function(event) {\n  keysHeld[event.key] = true;\n  if (event.key === " " && attackTimer === 0 && !gameOver && !roomCleared) {\n    swingSword();\n    attackTimer = 12;\n  }\n});\n\nfunction isTouching(a, b) {\n  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;\n}\n\nfunction getSwordHitbox() {\n  const REACH = 22;\n  if (hero.facing === "right") return { x: hero.x + hero.size, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "left")  return { x: hero.x - REACH, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "up")    return { x: hero.x, y: hero.y - REACH, width: hero.size, height: REACH };\n  return { x: hero.x, y: hero.y + hero.size, width: hero.size, height: REACH };\n}\n\nfunction swingSword() {\n  const sword = getSwordHitbox();\n  for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {\n    const enemy = enemies[enemyIndex];\n    const enemyBox = { x: enemy.x, y: enemy.y, width: enemy.size, height: enemy.size };\n    if (isTouching(sword, enemyBox)) {\n      enemy.health = enemy.health - 1;\n      if (enemy.health <= 0) {\n        enemies.splice(enemyIndex, 1);\n        rupees = rupees + 5;\n        experience = experience + 10;\n      }\n    }\n  }\n  if (enemies.length === 0) roomCleared = true;\n}\n\nfunction moveHero() {\n  let moveX = 0, moveY = 0;\n  if (keysHeld["ArrowLeft"])  { moveX = -hero.speed; hero.facing = "left"; }\n  if (keysHeld["ArrowRight"]) { moveX =  hero.speed; hero.facing = "right"; }\n  if (keysHeld["ArrowUp"])    { moveY = -hero.speed; hero.facing = "up"; }\n  if (keysHeld["ArrowDown"])  { moveY =  hero.speed; hero.facing = "down"; }\n  const nextX = hero.x + moveX, nextY = hero.y + moveY;\n  if (nextX > TILE_SIZE && nextX + hero.size < 320 - TILE_SIZE) hero.x = nextX;\n  if (nextY > TILE_SIZE && nextY + hero.size < 320 - TILE_SIZE) hero.y = nextY;\n}\n\nfunction moveEnemies() {\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    if (enemy.x < hero.x) enemy.x = enemy.x + enemy.speed;\n    if (enemy.x > hero.x) enemy.x = enemy.x - enemy.speed;\n    if (enemy.y < hero.y) enemy.y = enemy.y + enemy.speed;\n    if (enemy.y > hero.y) enemy.y = enemy.y - enemy.speed;\n  }\n}\n\nfunction checkHurt() {\n  if (hurtCooldown > 0) hurtCooldown = hurtCooldown - 1;\n  const heroBox = { x: hero.x, y: hero.y, width: hero.size, height: hero.size };\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    const enemyBox = { x: enemy.x, y: enemy.y, width: enemy.size, height: enemy.size };\n    if (hurtCooldown === 0 && isTouching(heroBox, enemyBox)) {\n      heroHealth = heroHealth - 1;\n      hurtCooldown = 60;\n      if (heroHealth <= 0) { heroHealth = 0; gameOver = true; }\n    }\n  }\n}\n\nfunction drawArena() {\n  for (let rowIndex = 0; rowIndex < arena.length; rowIndex++)\n    for (let colIndex = 0; colIndex < arena[rowIndex].length; colIndex++) {\n      ctx.fillStyle = arena[rowIndex][colIndex] === 1 ? "#5b3a1a" : "#4c9a2a";\n      ctx.fillRect(colIndex * TILE_SIZE, rowIndex * TILE_SIZE, TILE_SIZE, TILE_SIZE);\n    }\n}\n\nfunction drawHud() {\n  for (let heartIndex = 0; heartIndex < MAX_HEALTH; heartIndex++) {\n    ctx.fillStyle = heartIndex < heroHealth ? "#e23b3b" : "#5a3a3a";\n    ctx.fillRect(8 + heartIndex * 22, 8, 16, 16);\n  }\n  ctx.fillStyle = "#fff";\n  ctx.font = "13px monospace";\n  ctx.fillText("Rupees: " + rupees + "   XP: " + experience, 90, 21);\n}\n\nfunction drawSword() {\n  if (attackTimer <= 0) return;\n  const sword = getSwordHitbox();\n  ctx.fillStyle = "#e8e8e8";\n  ctx.fillRect(sword.x, sword.y, sword.width, sword.height);\n}\n\nfunction gameLoop() {\n  if (!gameOver && !roomCleared) {\n    moveHero();\n    moveEnemies();\n    checkHurt();\n    if (attackTimer > 0) attackTimer = attackTimer - 1;\n  }\n  drawArena();\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++)\n    drawSprite(slimeSprite, enemies[enemyIndex].x, enemies[enemyIndex].y, 3, PALETTE);\n  drawSword();\n  drawSprite(heroSprites[hero.facing], hero.x, hero.y, 3, PALETTE);\n  drawHud();\n  if (gameOver) {\n    ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(0, 130, 320, 60);\n    ctx.fillStyle = "#ff6b6b"; ctx.font = "22px monospace";\n    ctx.fillText("GAME OVER", 95, 168);\n  }\n  if (roomCleared) {\n    ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(0, 130, 320, 60);\n    ctx.fillStyle = "#ffe14d"; ctx.font = "20px monospace";\n    ctx.fillText("ROOM CLEARED!", 62, 168);\n  }\n  requestAnimationFrame(gameLoop);\n}\ngameLoop();\nconsole.log("Click the screen. Arrows to move, SPACE to swing your sword!");'
+  },
+  summary:"The full Level 2 game: a sprite hero who moves and swings a sword, a chasing enemy horde, health with a hurt cooldown, rupee/XP rewards, and a room-cleared win. You built every gear."
+}
+];
+
+/* ============================================================
+   State + storage
+   ============================================================ */
+const STORE_KEY = LEVEL.saveKey;
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return { completed:{}, current:TOPICS[0].id, code:{}, muted:false, heroName:"" };
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const questList = document.getElementById("questList");
+const scroll = document.getElementById("scroll");
+const heartsEl = document.getElementById("hearts");
+const barFill = document.getElementById("barFill");
+const pctText = document.getElementById("pctText");
+const rupeeCount = document.getElementById("rupeeCount");
+const editor = document.getElementById("editor");
+const stage = document.getElementById("stage");
+
+function completedCount(){
+  return TOPICS.filter(t => state.completed[t.id]).length;
+}
+
+function renderMap(){
+  questList.innerHTML = "";
+  TOPICS.forEach((t, i) => {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const done = !!state.completed[t.id];
+    const active = state.current === t.id;
+    btn.className = (done?"done ":"") + (active?"active":"");
+    btn.setAttribute("aria-current", active ? "true" : "false");
+    btn.innerHTML =
+      '<span class="dot">'+(done ? '&#10003;' : (i+1))+'</span>'+
+      '<span class="ttl">'+t.sub+'</span>'+
+      (done ? '<span class="check" aria-label="completed">&#9733;</span>' : '');
+    btn.addEventListener("click", () => { goTo(t.id); });
+    li.appendChild(btn);
+    questList.appendChild(li);
+  });
+}
+
+function renderMeter(){
+  const total = TOPICS.length;
+  const done = completedCount();
+  const pct = Math.round((done/total)*100);
+  barFill.style.width = pct + "%";
+  pctText.textContent = pct + "%";
+  rupeeCount.textContent = done;
+  // hearts: one heart per topic, filled if completed
+  heartsEl.innerHTML = "";
+  TOPICS.forEach((t) => {
+    const filled = !!state.completed[t.id];
+    heartsEl.insertAdjacentHTML("beforeend", heartSVG(filled));
+  });
+}
+
+function heartSVG(filled){
+  const color = filled ? "#e23b3b" : "#5a3a3a";
+  const stroke = filled ? "#8e1b1b" : "#3a2020";
+  return '<svg width="16" height="15" viewBox="0 0 16 15" aria-hidden="true">'+
+    '<path d="M8 14S1 9.5 1 4.8C1 2.7 2.7 1 4.8 1 6 1 7.2 1.6 8 2.7 8.8 1.6 10 1 11.2 1 13.3 1 15 2.7 15 4.8 15 9.5 8 14 8 14z" '+
+    'fill="'+color+'" stroke="'+stroke+'" stroke-width="1"/></svg>';
+}
+
+function renderTopic(){
+  const t = TOPICS.find(x => x.id === state.current) || TOPICS[0];
+  const idx = TOPICS.indexOf(t);
+  const done = !!state.completed[t.id];
+
+  let html = "";
+  html += '<span class="eyebrow">'+(t.isFinal ? 'Final Quest' : ('Dungeon '+(idx+1)+' of '+TOPICS.length))+'</span>';
+  html += '<h1>'+t.title+'</h1>';
+  html += '<p class="tag">'+t.sub+'</p>';
+
+  html += '<div class="section lesson"><h3>'+bookIcon()+'The Lesson</h3>'+t.lesson+'</div>';
+
+  html += '<div class="section model"><h3>'+brainIcon()+'Mental Model</h3><p>'+t.model+'</p></div>';
+
+  html += '<div class="section mistakes"><h3>'+warnIcon()+'Watch Out! Common Mistakes</h3><ul>';
+  t.mistakes.forEach(m => { html += '<li>'+m+'</li>'; });
+  html += '</ul></div>';
+
+  html += '<div class="section exercise"><h3>'+swordIcon()+'Your Quest (Exercise)</h3><p>'+t.exercise.intro+'</p>'+
+          '<button class="btn btn-green try-btn" id="loadExerciseBtn" type="button">Load this quest into the Workshop &darr;</button></div>';
+
+  html += '<div class="section summary"><h3>'+scrollIcon()+'Quick Recap</h3><p>'+t.summary+'</p></div>';
+
+  // complete row
+  html += '<div class="complete-row '+(done?'done':'')+'">'+
+            '<p>'+(done ? '&#9733; Quest cleared! A heart is yours.' : 'Finished this dungeon? Claim your heart!')+'</p>'+
+            '<button class="btn '+(done?'btn-ghost':'btn-gold')+'" id="completeBtn" type="button">'+
+              (done ? 'Mark as not done' : 'Mark complete &#10003;')+
+            '</button>'+
+          '</div>';
+
+  // footer nav
+  html += '<div class="foot-nav">';
+  html += idx>0 ? '<button class="btn btn-ghost" id="prevBtn" type="button">&larr; Previous</button>' : '<span></span>';
+  html += idx<TOPICS.length-1 ? '<button class="btn btn-gold" id="nextBtn" type="button">Next dungeon &rarr;</button>' : '<span></span>';
+  html += '</div>';
+
+  scroll.innerHTML = html;
+
+  // wire buttons
+  document.getElementById("completeBtn").addEventListener("click", toggleComplete);
+  const lx = document.getElementById("loadExerciseBtn");
+  if(lx) lx.addEventListener("click", () => { setEditor(t.exercise.starter); runCode(); toast("Quest loaded! Press Run ▶"); scrollToWorkshop(); });
+  const pb = document.getElementById("prevBtn"); if(pb) pb.addEventListener("click", () => goTo(TOPICS[idx-1].id));
+  const nb = document.getElementById("nextBtn"); if(nb) nb.addEventListener("click", () => goTo(TOPICS[idx+1].id));
+
+  // load saved code for this topic (or the starter)
+  const saved = state.code[t.id];
+  setEditor(typeof saved === "string" ? saved : t.exercise.starter);
+
+  wireWords();
+  scroll.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* small inline icons (SVG, no emojis in UI chrome) */
+function bookIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h6v14H3z" fill="#7a5a2a"/><path d="M11 3h6v14h-6z" fill="#9a7238"/><path d="M9 3h2v14H9z" fill="#5b4526"/></svg>';}
+function brainIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="#3aa0d6"/><path d="M10 5v10M6 8h8M6 12h8" stroke="#fff" stroke-width="1.4"/></svg>';}
+function warnIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8 15H2z" fill="#e23b3b"/><path d="M10 8v4M10 14v.5" stroke="#fff" stroke-width="1.8"/></svg>';}
+function swordIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M14 2l4 4-7 7-2-2z" fill="#c9ced6"/><path d="M4 14l3 3-2 1-2-2z" fill="#8a5a2a"/></svg>';}
+function scrollIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="3" width="12" height="14" rx="2" fill="#e6b422"/><path d="M6 6h8M6 9h8M6 12h6" stroke="#5b4526" stroke-width="1.2"/></svg>';}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function goTo(id){
+  state.current = id;
+  saveState();
+  renderMap();
+  renderTopic();
+}
+
+function toggleComplete(){
+  const id = state.current;
+  const wasDone = !!state.completed[id];
+  if(wasDone){ delete state.completed[id]; }
+  else { state.completed[id] = true; }
+  saveState();
+  renderMap();
+  renderMeter();
+  renderTopic();
+  if(!wasDone){
+    const n = completedCount();
+    if(n === TOPICS.length){
+      toast("🏆 ALL DUNGEONS CLEARED! You are a true game-maker!");
+      playSound("complete");
+      setTimeout(() => openCertificate(true), 650);
+    } else {
+      toast("New skill unlocked! +1 heart, +1 rupee");
+      playSound("complete");
+    }
+  }
+}
+
+function setEditor(code){ editor.value = code; }
+
+function scrollToWorkshop(){
+  document.querySelector(".pg").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------- The sandboxed playground ---------- */
+function runCode(){
+  const code = editor.value;
+  // save this code for the current topic
+  state.code[state.current] = code;
+  saveState();
+
+  const head =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
+    'html,body{margin:0;padding:8px;background:#0f2410;color:#e8ffd0;'+
+    'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;}'+
+    '#stageC{background:#4c9a2a;display:block;margin:0 auto 8px;border:3px solid #d4af37;'+
+    'border-radius:4px;image-rendering:pixelated;outline:none;}'+
+    '#out div{white-space:pre-wrap;line-height:1.5;padding:1px 0;}'+
+    '.ok{color:#d9f7b0;} .err{color:#ff9b9b;font-weight:bold;} .info{color:#9fd0ff;}'+
+    '</style></head><body>'+
+    '<canvas id="stageC" width="320" height="320" tabindex="0"></canvas>'+
+    '<div id="out"></div><script>(function(){'+
+    'var out=document.getElementById("out");'+
+    'var canvas=document.getElementById("stageC");'+
+    'var ctx=canvas.getContext("2d");'+
+    'canvas.focus();'+
+    'function show(cls,args){var d=document.createElement("div");d.className=cls;'+
+    'd.textContent=args.map(function(a){if(a&&typeof a==="object"){try{return JSON.stringify(a);}catch(e){return String(a);}}return String(a);}).join(" ");'+
+    'out.appendChild(d);}'+
+    'console.log=function(){show("ok",[].slice.call(arguments));};'+
+    'console.info=function(){show("info",[].slice.call(arguments));};'+
+    'console.warn=function(){show("info",[].slice.call(arguments));};'+
+    'console.error=function(){show("err",[].slice.call(arguments));};'+
+    'function friendly(m){m=String(m);'+
+    'if(/is not defined/.test(m))return m+"  (maybe a typo, or you forgot to make that variable?)";'+
+    'if(/unexpected|Unexpected/.test(m))return m+"  (check for a missing ) } or a stray character)";'+
+    'if(/cannot read|Cannot read/.test(m))return m+"  (you tried to use something that is empty)";'+
+    'return m;}'+
+    'window.onerror=function(msg,src,line){show("err",["Oops! "+friendly(msg)+(line?("  [line "+line+"]"):"")]);return true;};';
+
+  // Shared sprite helpers available to every exercise (see template/sprites.md)
+  const helpers =
+    'var PALETTE={".":null," ":null,"k":"#1a1a1a","w":"#ffffff","s":"#f2c79a","g":"#3aa63a","G":"#1f6d1f","b":"#3a6ea6","y":"#ffd23f","r":"#d63a3a","n":"#8a5a2a","e":"#e8e8e8","p":"#9a4ecf"};' +
+    'function drawSprite(sprite,screenX,screenY,pixelSize,palette){palette=palette||PALETTE;for(var rowIndex=0;rowIndex<sprite.length;rowIndex++){var row=sprite[rowIndex];for(var colIndex=0;colIndex<row.length;colIndex++){var color=palette[row[colIndex]];if(!color)continue;ctx.fillStyle=color;ctx.fillRect(screenX+colIndex*pixelSize,screenY+rowIndex*pixelSize,pixelSize,pixelSize);}}}';
+
+  const tail = '\n})();<\/scr'+'ipt></body></html>';
+
+  // wrap the user code in a try so runtime errors are friendly
+  const userWrapped = 'try{\n' + code + '\n}catch(e){show("err",["Oops! "+friendly(e.message)]);}';
+
+  stage.srcdoc = head + helpers + userWrapped + tail;
+}
+
+/* ---------- Hard-word tooltips ---------- */
+const tip = document.getElementById("tip");
+function wireWords(){
+  scroll.querySelectorAll(".word").forEach(el => {
+    el.setAttribute("tabindex","0");
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label", el.textContent + ": " + el.getAttribute("data-tip"));
+    el.addEventListener("mouseenter", showTip);
+    el.addEventListener("mousemove", moveTip);
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("focus", showTip);
+    el.addEventListener("blur", hideTip);
+  });
+}
+function showTip(e){
+  const t = e.currentTarget.getAttribute("data-tip");
+  tip.textContent = t;
+  tip.style.display = "block";
+  positionTip(e);
+}
+function moveTip(e){ positionTip(e); }
+function positionTip(e){
+  const pad = 14;
+  let x, y;
+  const r = e.currentTarget.getBoundingClientRect();
+  if(e.clientX){ x = e.clientX + pad; y = e.clientY + pad; }
+  else { x = r.left; y = r.bottom + 6; }
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  if(x + w > window.innerWidth - 8) x = window.innerWidth - w - 8;
+  if(y + h > window.innerHeight - 8) y = r.top - h - 6;
+  tip.style.left = Math.max(8,x) + "px";
+  tip.style.top = Math.max(8,y) + "px";
+}
+function hideTip(){ tip.style.display = "none"; }
+
+/* ============================================================
+   Sound effects (Web Audio — offline, no files)
+   ============================================================ */
+let audioCtx = null;
+function ac(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  return audioCtx;
+}
+function tone(freq, start, dur, type, vol){
+  const c = ac(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type || "square";
+  o.frequency.value = freq;
+  o.connect(g); g.connect(c.destination);
+  const t0 = c.currentTime + start;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol || 0.18, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur + 0.03);
+}
+function playSound(name){
+  if(state.muted) return;
+  const c = ac(); if(!c) return;
+  if(c.state === "suspended"){ try{ c.resume(); }catch(e){} }
+  if(name === "complete"){
+    // bright little "secret found" pickup
+    [[659.25,0],[783.99,0.09],[987.77,0.18],[1318.51,0.28]].forEach(n => tone(n[0], n[1], 0.19, "square", 0.16));
+  } else if(name === "win"){
+    // triumphant fanfare for the certificate
+    [[523.25,0],[659.25,0.12],[783.99,0.24],[1046.5,0.38],[783.99,0.52],[1046.5,0.64],[1318.51,0.82]]
+      .forEach(n => tone(n[0], n[1], 0.24, "square", 0.2));
+    [[130.81,0],[196,0.38],[261.63,0.64]].forEach(n => tone(n[0], n[1], 0.4, "triangle", 0.14)); // bass
+  } else if(name === "click"){
+    tone(880, 0, 0.06, "square", 0.1);
+  }
+}
+
+/* Mute toggle */
+const muteIcon = document.getElementById("muteIcon");
+const muteLabel = document.getElementById("muteLabel");
+const muteBtn = document.getElementById("muteBtn");
+function speakerSVG(on){
+  return on
+    ? '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5c1.5 1.2 1.5 4.8 0 6M13 3c3 2.5 3 7.5 0 10" stroke="#fff" stroke-width="1.4" fill="none"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5l4 6M15 5l-4 6" stroke="#ff9b9b" stroke-width="1.6"/></svg>';
+}
+function renderMute(){
+  const on = !state.muted;
+  muteIcon.innerHTML = speakerSVG(on);
+  muteLabel.textContent = on ? "Sound on" : "Muted";
+  muteBtn.setAttribute("aria-pressed", state.muted ? "true" : "false");
+}
+muteBtn.addEventListener("click", () => {
+  state.muted = !state.muted;
+  saveState();
+  renderMute();
+  if(!state.muted) playSound("click");
+});
+
+/* ============================================================
+   Certificate of Completion
+   ============================================================ */
+const certModal = document.getElementById("certModal");
+const heroNameInput = document.getElementById("heroNameInput");
+const certDate = document.getElementById("certDate");
+const certHearts = document.getElementById("certHearts");
+
+function allDone(){ return completedCount() === TOPICS.length; }
+
+function openCertificate(celebrate){
+  heroNameInput.value = state.heroName || "";
+  certDate.textContent = new Date().toLocaleDateString(undefined, {year:"numeric", month:"long", day:"numeric"});
+  certHearts.textContent = completedCount() + " / " + TOPICS.length;
+  document.getElementById("certBody").innerHTML = LEVEL.certBody;
+  certModal.classList.add("show");
+  if(celebrate){
+    playSound("win");
+    confetti();
+  }
+  if(!state.heroName){ setTimeout(() => heroNameInput.focus(), 200); }
+}
+function closeCertificate(){ certModal.classList.remove("show"); }
+
+heroNameInput.addEventListener("input", () => {
+  state.heroName = heroNameInput.value;
+  saveState();
+});
+document.getElementById("certClose").addEventListener("click", closeCertificate);
+document.getElementById("certCloseBtn").addEventListener("click", closeCertificate);
+document.getElementById("certPrint").addEventListener("click", () => window.print());
+document.getElementById("certReplay").addEventListener("click", () => { playSound("win"); confetti(); });
+certModal.addEventListener("click", (e) => { if(e.target === certModal) closeCertificate(); });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape" && certModal.classList.contains("show")) closeCertificate(); });
+
+document.getElementById("trophyBtn").addEventListener("click", () => {
+  if(allDone()){ openCertificate(false); }
+  else {
+    const left = TOPICS.length - completedCount();
+    toast("Clear " + left + " more dungeon" + (left===1?"":"s") + " to earn your certificate!");
+  }
+});
+
+/* Confetti burst (respects reduced-motion via CSS) */
+function confetti(){
+  const colors = ["#e6b422","#37b34a","#e23b3b","#3aa0d6","#ffe14d"];
+  for(let i=0;i<70;i++){
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.background = colors[i % colors.length];
+    c.style.left = Math.random()*100 + "vw";
+    const dur = 2.2 + Math.random()*1.8;
+    const rot = (Math.random()*720-360);
+    c.style.transform = "rotate("+(Math.random()*360)+"deg)";
+    document.body.appendChild(c);
+    c.animate(
+      [{ transform:"translateY(-10px) rotate(0deg)", opacity:1 },
+       { transform:"translateY(100vh) rotate("+rot+"deg)", opacity:1 },
+       { transform:"translateY(102vh) rotate("+rot+"deg)", opacity:0 }],
+      { duration: dur*1000, easing:"cubic-bezier(.3,.6,.6,1)" }
+    ).onfinish = () => c.remove();
+  }
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ============================================================
+   Wire top-level controls
+   ============================================================ */
+document.getElementById("runBtn").addEventListener("click", () => { playSound("click"); runCode(); });
+document.getElementById("loadExample").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  runCode();
+  toast("Example loaded & running!");
+});
+document.getElementById("resetCode").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  delete state.code[t.id];
+  saveState();
+  toast("Code reset to the starter.");
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if(confirm("Start a brand-new game? This erases all your hearts, rupees, and saved code.")){
+    state = { completed:{}, current:TOPICS[0].id, code:{}, muted:state.muted, heroName:state.heroName };
+    saveState();
+    closeCertificate();
+    renderAll();
+    toast("New game started. Good luck, hero!");
+  }
+});
+
+// Tab inserts spaces in the editor instead of leaving the box
+editor.addEventListener("keydown", function(e){
+  if(e.key === "Tab"){
+    e.preventDefault();
+    const s = this.selectionStart, en = this.selectionEnd;
+    this.value = this.value.slice(0,s) + "  " + this.value.slice(en);
+    this.selectionStart = this.selectionEnd = s + 2;
+  }
+});
+// autosave editor as you type (debounced)
+let saveTimer;
+editor.addEventListener("input", function(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { state.code[state.current] = editor.value; saveState(); }, 400);
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+function renderAll(){
+  renderMap();
+  renderMeter();
+  renderTopic();
+  renderMute();
+}
+renderAll();
+// draw the current topic's code once so the workshop isn't empty
+runCode();
+</script>
+</body>
+</html>
