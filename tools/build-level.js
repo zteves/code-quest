@@ -8,6 +8,36 @@ const ROOT = path.resolve(__dirname, '..');
 const BASE = path.join(ROOT, 'template', 'base.html');
 
 const LEVELS = {
+  2: {
+    topics: 'level-02.js',
+    out: 'levels/level-02/index.html',
+    config: `const LEVEL = {
+  number: 2,
+  id: "l2-combat",
+  title: "Code Quest · Level 2 — The Monsters Awaken",
+  subtitle: "Combat & Enemies",
+  saveKey: "codequest_L2_v1",
+  certBody: "For bravely clearing every dungeon of <b>Level 2: The Monsters Awaken</b> — "
+    + "mastering pixel sprites, enemy objects, arrays of monsters, health &amp; damage, "
+    + "chasing enemies, hurt cooldowns, and sword combat — and building a full battle arena "
+    + "where the hero fights off a horde and clears the room. A true game-maker!"
+};`
+  },
+  3: {
+    topics: 'level-03.js',
+    out: 'levels/level-03/index.html',
+    config: `const LEVEL = {
+  number: 3,
+  id: "l3-treasure",
+  title: "Code Quest · Level 3 — Treasure & Power",
+  subtitle: "Items, Rewards & Leveling",
+  saveKey: "codequest_L3_v1",
+  certBody: "For bravely clearing every dungeon of <b>Level 3: Treasure &amp; Power</b> — "
+    + "mastering treasure chests, item objects, inventory, random loot, experience points, "
+    + "leveling up, and stats that scale — and building a treasure dungeon where the hero "
+    + "loots chests, fights slimes, earns XP, and grows stronger. A true game-maker!"
+};`
+  },
   5: {
     topics: 'level-05.js',
     out: 'levels/level-05/index.html',
