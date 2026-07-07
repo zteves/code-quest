@@ -78,7 +78,7 @@ curiosity over memorization. Some notes for parents, teachers, and mentors:
   later. The heart meter gives a natural sense of "how far to go."
 - **Sit alongside for the games.** The interactive game topics need a click on the game
   screen before the keys work — a common first stumble. After that, it's arrows to move,
-  space to act. Playing the boy's own creation together is the payoff.
+  space to act. Playing the child's own creation together is the payoff.
 - **It's private and offline by design.** No accounts, no sign-in, no network calls, no
   analytics — nothing leaves the computer. Progress lives in that one browser's local
   storage. Great for young kids: you can hand it over without worrying about the internet.
