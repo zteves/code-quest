@@ -53,3 +53,8 @@ docs/
 - **Teach for deep understanding** — simple English, real-world analogies, explain every
   hard word, practice in a live playground.
 - **Human-readable code** — variable names are a free lesson; no cryptic shorthand.
+
+## License
+
+Released under the [MIT License](LICENSE) — free to use, copy, modify, and share.
+Contributions and remixes are welcome.
