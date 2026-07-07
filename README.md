@@ -18,7 +18,7 @@ Open any level's `index.html` in a browser. Progress saves automatically to that
 | 2 | The Monsters Awaken | sprites, enemies, combat, health & damage | ✅ Shipped (`levels/level-02/`) |
 | 3 | Treasure & Power | chests, items, inventory, XP & leveling | ✅ Shipped (`levels/level-03/`) |
 | 4 | Deeper into the Dungeon | multi-floor navigation | ✅ Shipped (`levels/level-04/`) |
-| 5 | The Grand Quest | game states, boss, full multi-floor adventure | 🔜 Planned |
+| 5 | The Grand Quest | game states, boss, full multi-floor adventure | ✅ Shipped (`levels/level-05/`) |
 
 Each level builds on the last and evolves **one shared game** toward a complete multi-floor
 adventure with enemies, rewards, and a boss.

@@ -8,6 +8,22 @@ const ROOT = path.resolve(__dirname, '..');
 const BASE = path.join(ROOT, 'template', 'base.html');
 
 const LEVELS = {
+  5: {
+    topics: 'level-05.js',
+    out: 'levels/level-05/index.html',
+    config: `const LEVEL = {
+  number: 5,
+  id: "l5-grand-quest",
+  title: "Code Quest · Level 5 — The Grand Quest",
+  subtitle: "Boss, Game States & the Full Adventure",
+  saveKey: "codequest_L5_v1",
+  certBody: "For bravely clearing every dungeon of <b>Level 5: The Grand Quest</b> — mastering "
+    + "game states, a title screen, a boss with attack patterns and a health bar, win/lose and "
+    + "restart, and polish (screen shake and particles) — and building the complete adventure: "
+    + "a title screen, a three-floor dungeon, combat, loot, leveling, and the King Slime boss. "
+    + "You didn't just learn to code — you built a game. A true game-maker!"
+};`
+  },
   4: {
     topics: 'level-04.js',
     out: 'levels/level-04/index.html',

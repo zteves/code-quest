@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Quest</title>
+<style>
+  /* ---------- Zelda-flavored theme (readable first, adventure second) ---------- */
+  :root{
+    --forest:#2e5d34;
+    --forest-dark:#1c3a20;
+    --forest-darker:#132a17;
+    --grass:#7cb342;
+    --grass-light:#a7e07a;
+    --gold:#e6b422;
+    --gold-deep:#b8860b;
+    --parchment:#f6ead0;
+    --parchment-2:#efdcb4;
+    --ink:#3a2a15;
+    --ink-soft:#5b4526;
+    --rupee:#37b34a;
+    --rupee-blue:#3aa0d6;
+    --heart:#e23b3b;
+    --heart-empty:#7a5a5a;
+    --shadow:rgba(19,42,23,.35);
+    --focus:#2ec5ff;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Segoe UI",Tahoma,Verdana,system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 20% -10%, #3c7a44 0, transparent 45%),
+      radial-gradient(circle at 90% 0%, #2b5a31 0, transparent 40%),
+      var(--forest-dark);
+    line-height:1.65;
+    font-size:17px;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:.5px;line-height:1.25;}
+
+  /* Pixel-stepped border helper for that retro-cart feel */
+  .pixel{
+    box-shadow:
+      0 0 0 3px var(--forest-darker),
+      0 0 0 6px var(--gold),
+      0 0 0 9px var(--forest-darker),
+      0 10px 24px var(--shadow);
+  }
+
+  a{color:var(--gold-deep);}
+
+  /* ---------- Top bar / heart meter ---------- */
+  header{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(180deg,var(--forest) 0%, var(--forest-dark) 100%);
+    border-bottom:4px solid var(--gold);
+    padding:10px 16px;
+    color:#fff;
+  }
+  .topwrap{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:Georgia,serif;font-weight:700;font-size:1.15rem;color:#fff8dc;text-shadow:1px 1px 0 #000;}
+  .brand svg{filter:drop-shadow(0 1px 0 #000);}
+  .meter{flex:1;min-width:220px;}
+  .meter-label{font-size:.8rem;color:#ffe9a8;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;display:flex;justify-content:space-between;}
+  .hearts{display:flex;gap:3px;align-items:center;flex-wrap:wrap;}
+  .bar{height:14px;background:var(--forest-darker);border:2px solid #000;border-radius:8px;overflow:hidden;margin-top:6px;box-shadow:inset 0 2px 4px rgba(0,0,0,.5);}
+  .bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--rupee),var(--grass-light));transition:width .4s ease;}
+  @media (prefers-reduced-motion: reduce){ .bar-fill{transition:none;} }
+  .rupees{display:flex;align-items:center;gap:6px;font-weight:700;color:#c8f7cf;background:rgba(0,0,0,.25);padding:4px 10px;border-radius:20px;font-size:.95rem;}
+  .btn{
+    font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:8px;
+    padding:9px 14px;font-size:.95rem;transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+  .btn-gold{background:linear-gradient(180deg,#f4cf5a,var(--gold));color:#4a3500;box-shadow:0 3px 0 var(--gold-deep);}
+  .btn-gold:hover{filter:brightness(1.06);}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.5);}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+  .btn-green{background:linear-gradient(180deg,#8fd35a,var(--rupee));color:#0d2e12;box-shadow:0 3px 0 #1f7a2c;}
+  .btn-green:hover{filter:brightness(1.06);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;}
+
+  /* ---------- Layout ---------- */
+  .layout{max-width:1280px;margin:22px auto;padding:0 16px;display:grid;grid-template-columns:290px 1fr;gap:22px;align-items:start;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+
+  /* Sidebar map */
+  .map{
+    background:linear-gradient(180deg,var(--parchment),var(--parchment-2));
+    border-radius:12px;padding:14px;position:sticky;top:96px;
+  }
+  @media (max-width:900px){ .map{position:static;} }
+  .map h2{margin:.1rem 0 .6rem;font-size:1.05rem;color:var(--forest-dark);text-align:center;}
+  .map-sub{text-align:center;font-size:.78rem;color:var(--ink-soft);margin-bottom:10px;}
+  .quest{list-style:none;margin:0;padding:0;counter-reset:q;max-height:60vh;overflow:auto;}
+  .quest li{margin:0 0 6px;}
+  .quest button{
+    width:100%;text-align:left;display:flex;align-items:center;gap:9px;
+    background:rgba(255,255,255,.55);border:2px solid transparent;border-radius:9px;
+    padding:8px 10px;cursor:pointer;font-family:inherit;font-size:.92rem;color:var(--ink);
+    transition:background .15s,border-color .15s;
+  }
+  .quest button:hover{background:#fff;}
+  .quest button:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .quest button.active{border-color:var(--gold);background:#fff7e0;font-weight:700;}
+  .quest .dot{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;font-weight:700;color:#fff;background:var(--ink-soft);}
+  .quest button.done .dot{background:var(--rupee);}
+  .quest button.active .dot{background:var(--gold);color:#3a2a00;}
+  .quest .ttl{flex:1;}
+  .quest .check{color:var(--rupee);font-weight:700;}
+
+  .reset-row{margin-top:12px;text-align:center;}
+  .reset-btn{background:none;border:none;color:var(--ink-soft);text-decoration:underline;cursor:pointer;font-size:.8rem;font-family:inherit;}
+  .reset-btn:hover{color:var(--heart);}
+
+  /* Main scroll (the topic) */
+  main{min-width:0;}
+  .scroll{
+    background:linear-gradient(180deg,var(--parchment),#fff6e0 60%,var(--parchment-2));
+    border-radius:14px;padding:26px 26px 30px;
+  }
+  .eyebrow{display:inline-block;background:var(--forest);color:#fff2c8;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;}
+  .scroll h1{font-size:1.9rem;margin:.5rem 0 .2rem;color:var(--forest-dark);}
+  .scroll .tag{color:var(--ink-soft);font-style:italic;margin:0 0 18px;}
+
+  .section{margin:22px 0;padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.55);border-left:6px solid var(--gold);}
+  .section.model{border-left-color:var(--rupee-blue);background:#eef7fb;}
+  .section.mistakes{border-left-color:var(--heart);background:#fbeeee;}
+  .section.exercise{border-left-color:var(--rupee);background:#eefaef;}
+  .section.summary{border-left-color:var(--gold-deep);background:#fbf3dd;}
+  .section h3{margin:.1rem 0 .5rem;display:flex;align-items:center;gap:9px;font-size:1.15rem;color:var(--forest-dark);}
+  .section.model h3{color:#1c5b7a;}
+  .section.mistakes h3{color:#a52424;}
+  .section.exercise h3{color:#1f7a2c;}
+  .section p{margin:.5rem 0;}
+  .section ul{margin:.4rem 0;padding-left:1.3rem;}
+  .section li{margin:.3rem 0;}
+
+  .word{border-bottom:2px dotted var(--gold-deep);cursor:help;font-weight:700;color:var(--ink);}
+  code{background:#2b2016;color:#ffe9a8;padding:2px 6px;border-radius:5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;}
+  pre{background:#221a12;color:#f4e9d2;padding:14px 16px;border-radius:10px;overflow:auto;border:2px solid var(--gold-deep);}
+  pre code{background:none;color:inherit;padding:0;}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
+  @media (max-width:560px){ .compare{grid-template-columns:1fr;} }
+  .compare .col{background:#fff;border-radius:10px;padding:10px 12px;border:2px solid var(--parchment-2);}
+  .compare .col h4{margin:.1rem 0 .4rem;font-size:.95rem;}
+
+  .try-btn{margin-top:8px;}
+  .foot-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap;}
+
+  .complete-row{margin-top:20px;padding:16px;border-radius:12px;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .complete-row.done{background:linear-gradient(180deg,#2f7a38,#1f5a27);}
+  .complete-row p{margin:0;font-weight:700;}
+
+  /* ---------- Playground ---------- */
+  .pg{margin-top:22px;background:var(--forest-darker);border-radius:14px;padding:14px;}
+  .pg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .pg-head h3{color:#ffe9a8;margin:0;font-size:1.05rem;display:flex;align-items:center;gap:8px;}
+  .pg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .pg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:760px){ .pg-grid{grid-template-columns:1fr;} }
+  .pg-pane label{display:block;color:#cfe8b8;font-size:.78rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
+  textarea#editor{
+    width:100%;height:520px;resize:vertical;border-radius:10px;border:2px solid var(--gold-deep);
+    background:#161009;color:#f4e9d2;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+    padding:12px;line-height:1.5;tab-size:2;
+  }
+  textarea#editor:focus-visible{outline:3px solid var(--focus);outline-offset:1px;}
+  .pg-out{width:100%;height:520px;border:2px solid var(--gold-deep);border-radius:10px;background:#0f2410;}
+  .pg-hint{color:#a9c99a;font-size:.8rem;margin-top:8px;}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120%);
+    background:var(--forest);color:#fff7d6;border:3px solid var(--gold);border-radius:12px;
+    padding:12px 20px;font-weight:700;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.5);
+    transition:transform .35s cubic-bezier(.2,1.3,.4,1);max-width:90vw;text-align:center;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  @media (prefers-reduced-motion: reduce){ .toast{transition:none;} }
+
+  /* Tooltip for hard words */
+  .tip{position:fixed;z-index:70;max-width:260px;background:#221a12;color:#ffe9a8;border:2px solid var(--gold);border-radius:10px;padding:8px 12px;font-size:.85rem;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;}
+
+  /* Mute toggle */
+  .mute-btn{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.35);color:#fff;border-radius:20px;padding:5px 12px;cursor:pointer;font-family:inherit;font-weight:700;font-size:.85rem;}
+  .mute-btn:hover{background:rgba(0,0,0,.4);}
+  .mute-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px;}
+
+  .trophy-btn{width:100%;margin-top:10px;}
+
+  /* Certificate modal */
+  .cert-backdrop{position:fixed;inset:0;z-index:80;background:rgba(10,20,10,.82);display:none;align-items:center;justify-content:center;padding:20px;overflow:auto;}
+  .cert-backdrop.show{display:flex;}
+  .cert{
+    position:relative;width:min(680px,94vw);background:
+      repeating-linear-gradient(45deg,rgba(0,0,0,.015) 0 8px,transparent 8px 16px),
+      linear-gradient(180deg,#fbf1d6,#f2e2b8);
+    border-radius:8px;padding:38px 34px 30px;color:var(--ink);text-align:center;
+    box-shadow:0 0 0 4px var(--forest-dark),0 0 0 8px var(--gold),0 0 0 12px var(--forest-dark),0 24px 60px rgba(0,0,0,.6);
+  }
+  .cert .seal{margin:0 auto 6px;}
+  .cert .cert-kicker{letter-spacing:5px;text-transform:uppercase;font-size:.8rem;color:var(--forest-dark);font-weight:700;}
+  .cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2rem 0;color:var(--forest-dark);}
+  .cert .ribbon{color:var(--gold-deep);font-style:italic;margin:.1rem 0 1rem;}
+  .cert .awarded{font-size:.9rem;color:var(--ink-soft);margin:.2rem 0;}
+  .cert .name-input{
+    font-family:Georgia,serif;font-size:1.7rem;font-weight:700;text-align:center;color:var(--forest-dark);
+    border:none;border-bottom:3px dashed var(--gold-deep);background:transparent;width:90%;max-width:420px;margin:6px auto 4px;padding:4px 8px;display:block;
+  }
+  .cert .name-input:focus{outline:none;border-bottom-color:var(--rupee);}
+  .cert .name-hint{font-size:.72rem;color:var(--ink-soft);margin-bottom:14px;}
+  .cert .cert-body{font-size:1rem;line-height:1.6;margin:8px auto 16px;max-width:520px;}
+  .cert .cert-meta{display:flex;justify-content:space-between;gap:12px;margin:18px 24px 6px;font-size:.85rem;color:var(--ink-soft);}
+  .cert .cert-meta b{display:block;color:var(--forest-dark);border-top:2px solid var(--ink-soft);padding-top:4px;font-family:Georgia,serif;}
+  .cert-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap;}
+  .cert-close{position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink-soft);}
+  .cert-close:hover{color:var(--heart);}
+  .confetti{position:fixed;top:-10px;width:9px;height:14px;z-index:85;pointer-events:none;border-radius:2px;}
+  @media (prefers-reduced-motion: reduce){ .confetti{display:none!important;} }
+
+  @media print{
+    body{background:#fff;}
+    body > *{visibility:hidden;}
+    .cert-backdrop, .cert-backdrop *{visibility:visible;}
+    .cert-backdrop{position:absolute;inset:0;background:#fff;display:flex!important;padding:0;}
+    .cert{box-shadow:0 0 0 3px #000, 0 0 0 7px #b8860b, 0 0 0 10px #000;}
+    .cert-actions,.cert-close{display:none!important;}
+  }
+
+  footer{max-width:1200px;margin:10px auto 40px;padding:0 16px;color:#bfe0b3;font-size:.82rem;text-align:center;}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topwrap">
+    <div class="brand">
+      <!-- little triforce -->
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true">
+        <polygon points="13,0 17,7 9,7" fill="#ffe14d"/>
+        <polygon points="8,9 12,16 4,16" fill="#ffe14d"/>
+        <polygon points="18,9 22,16 14,16" fill="#ffe14d"/>
+      </svg>
+      Code Quest
+    </div>
+    <div class="meter" aria-hidden="false">
+      <div class="meter-label"><span>Hero Progress</span><span id="pctText">0%</span></div>
+      <div class="hearts" id="hearts" aria-label="Progress hearts"></div>
+      <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+    <div class="rupees" title="One rupee for every quest you finish">
+      <svg width="14" height="18" viewBox="0 0 14 18" aria-hidden="true"><polygon points="7,0 14,5 14,13 7,18 0,13 0,5" fill="#37e07a" stroke="#0d5c27" stroke-width="1"/></svg>
+      <span id="rupeeCount">0</span> rupees
+    </div>
+    <button class="mute-btn" id="muteBtn" type="button" aria-pressed="false" title="Turn game sounds on or off">
+      <span id="muteIcon" aria-hidden="true"></span><span id="muteLabel">Sound</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar: the world map -->
+  <aside class="map pixel">
+    <h2>World Map</h2>
+    <div class="map-sub">Clear each dungeon to grow your hearts</div>
+    <ul class="quest" id="questList"></ul>
+    <button class="btn btn-gold trophy-btn" id="trophyBtn" type="button">&#127942; Trophy Room</button>
+    <div class="reset-row">
+      <button class="reset-btn" id="resetBtn">Start a new game (reset progress)</button>
+    </div>
+  </aside>
+
+  <!-- Main: the scroll -->
+  <main>
+    <section class="scroll pixel" id="scroll" aria-live="polite"></section>
+
+    <!-- Playground -->
+    <section class="pg pixel" aria-label="Code playground">
+      <div class="pg-head">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 9l4-4 1.4 1.4L4.8 9l2.6 2.6L6 13 2 9zm14 0l-4 4-1.4-1.4L13.2 9l-2.6-2.6L12 5l4 4z" fill="#ffe14d"/></svg>
+          Magic Workshop (run your code)
+        </h3>
+        <div class="pg-actions">
+          <button class="btn btn-ghost" id="loadExample" type="button">Load example</button>
+          <button class="btn btn-ghost" id="resetCode" type="button">Reset code</button>
+          <button class="btn btn-green" id="runBtn" type="button">▶ Run</button>
+        </div>
+      </div>
+      <div class="pg-grid">
+        <div class="pg-pane">
+          <label for="editor">Your spellbook (type code here)</label>
+          <textarea id="editor" spellcheck="false" aria-label="Code editor"></textarea>
+        </div>
+        <div class="pg-pane">
+          <label>What happens (screen + messages)</label>
+          <iframe id="stage" class="pg-out" title="Code output" sandbox="allow-scripts"></iframe>
+        </div>
+      </div>
+      <p class="pg-hint">Tip: click the game screen first so the arrow keys work. Your code and progress save by themselves — you can close this and come back later.</p>
+    </section>
+
+    <footer>Made for brave new game-makers. Everything runs on your own computer, even with no internet. 🗡️</footer>
+  </main>
+</div>
+
+<!-- Certificate of Completion -->
+<div class="cert-backdrop" id="certModal" role="dialog" aria-modal="true" aria-labelledby="certTitle">
+  <div class="cert">
+    <button class="cert-close" id="certClose" type="button" aria-label="Close certificate">&times;</button>
+    <svg class="seal" width="58" height="54" viewBox="0 0 58 54" aria-hidden="true">
+      <polygon points="29,2 39,19 19,19" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="18,22 28,39 8,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+      <polygon points="40,22 50,39 30,39" fill="#e6b422" stroke="#8a5a00" stroke-width="1.5"/>
+    </svg>
+    <div class="cert-kicker">Hyrule Academy of Game-Making</div>
+    <h2 id="certTitle">Certificate of Completion</h2>
+    <div class="ribbon">~ Master Game-Maker ~</div>
+    <div class="awarded">This heroic certificate is proudly awarded to</div>
+    <input class="name-input" id="heroNameInput" type="text" maxlength="28" aria-label="Your name" placeholder="Type your name">
+    <div class="name-hint">(click your name to change it — it saves automatically)</div>
+    <p class="cert-body" id="certBody"></p>
+    <div class="cert-meta">
+      <div>Date<b id="certDate">—</b></div>
+      <div>Rank<b>Master Game-Maker</b></div>
+      <div>Hearts<b id="certHearts">15 / 15</b></div>
+    </div>
+    <div class="cert-actions">
+      <button class="btn btn-gold" id="certPrint" type="button">&#128424; Print / Save as PDF</button>
+      <button class="btn btn-green" id="certReplay" type="button">&#9835; Play fanfare</button>
+      <button class="btn btn-ghost" id="certCloseBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+/* ============================================================
+   CODE QUEST — single-file offline course
+   All data + logic below. No network, no dependencies.
+   ============================================================ */
+
+/* ============================================================
+   LEVEL CONFIG — every level fills this in. See STANDARDS.md §10.
+   ============================================================ */
+const LEVEL = {
+  number: 5,
+  id: "l5-grand-quest",
+  title: "Code Quest · Level 5 — The Grand Quest",
+  subtitle: "Boss, Game States & the Full Adventure",
+  saveKey: "codequest_L5_v1",
+  certBody: "For bravely clearing every dungeon of <b>Level 5: The Grand Quest</b> — mastering "
+    + "game states, a title screen, a boss with attack patterns and a health bar, win/lose and "
+    + "restart, and polish (screen shake and particles) — and building the complete adventure: "
+    + "a title screen, a three-floor dungeon, combat, loot, leveling, and the King Slime boss. "
+    + "You didn't just learn to code — you built a game. A true game-maker!"
+};
+document.title = LEVEL.title;
+
+/* ---------- helper for defining a "hard word" tooltip ---------- */
+function W(word, meaning){
+  return '<span class="word" data-tip="'+meaning.replace(/"/g,'&quot;')+'">'+word+'</span>';
+}
+
+/* ---------- The curriculum ---------- */
+/* Each topic: title, sub, lesson(html), model, mistakes[], exercise{intro, starter}, summary */
+const TOPICS = [
+{
+  id:"game-states",
+  title:"The Game's Moods",
+  sub:"Game states",
+  lesson:
+    "<p>A real game isn't always 'playing'. Sometimes it's showing a title screen, sometimes you "+
+    "won, sometimes it's game over. Each of these is a "+W("game state","which mode the game is in right now — like title, playing, or victory")+". "+
+    "We remember it in one word:</p>"+
+    "<pre><code>let gameState = \"title\";   // \"title\", \"playing\", \"victory\", \"gameover\"</code></pre>"+
+    "<p>The game loop then draws a different screen depending on the state — like a big if/else "+
+    "that decides the whole game's mood:</p>"+
+    "<pre><code>if (gameState === \"title\")   drawTitle();\nelse if (gameState === \"playing\") drawGame();\nelse if (gameState === \"victory\") drawVictory();</code></pre>"+
+    "<p>Change that one word and the entire game switches screens. It's the same trick as "+
+    "<code>hero.facing</code> and <code>currentFloor</code> — one label steering everything.</p>",
+  model:"gameState is the game's mood ring. The loop reads it and shows the matching screen. Change the word, change the whole game.",
+  mistakes:[
+    "Spelling a state differently in two places — <code>\"gameover\"</code> must match everywhere.",
+    "Updating the game (moving the hero) even on the title or victory screen.",
+    "Forgetting a state, so one screen never shows."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to move through the game's moods: title → playing → victory → back to title. One word changes the whole screen.",
+    starter:'let gameState = "title";\nlet actionCooldown = 0;\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === " " && actionCooldown <= 0) {\n    if (gameState === "title") gameState = "playing";\n    else if (gameState === "playing") gameState = "victory";\n    else gameState = "title";\n    actionCooldown = 16;\n  }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  if (gameState === "title") {\n    ctx.fillStyle = "#1c2530"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#ffe14d"; ctx.font = "20px monospace"; ctx.fillText("TITLE SCREEN", 70, 150);\n  } else if (gameState === "playing") {\n    ctx.fillStyle = "#2e5d34"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#fff"; ctx.font = "20px monospace"; ctx.fillText("PLAYING...", 90, 150);\n  } else {\n    ctx.fillStyle = "#3a2a5a"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#7cffb0"; ctx.font = "20px monospace"; ctx.fillText("VICTORY!", 100, 150);\n  }\n  ctx.fillStyle = "#fff"; ctx.font = "12px monospace";\n  ctx.fillText("state: " + gameState + "  (press SPACE)", 60, 300);\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE to change the game state.");'
+  },
+  summary:"gameState is one word (title/playing/victory/gameover) that the loop reads to decide which screen to draw. Change the word to switch the whole game."
+},
+{
+  id:"title-screen",
+  title:"Press Start",
+  sub:"The title screen",
+  lesson:
+    "<p>Every adventure needs a beginning. The title screen shows the game's name and waits for the "+
+    "player to press a key to start. When they do, we flip the state to <code>\"playing\"</code>:</p>"+
+    "<pre><code>if (event.key === \" \" && gameState === \"title\") {\n  gameState = \"playing\";\n}</code></pre>"+
+    "<p>That's it — a title screen is just the <code>\"title\"</code> state that draws a welcome and "+
+    "listens for the start key. It makes your game feel <i>real</i>, like something you'd pop into a "+
+    "console.</p>",
+  model:"The title screen is the front door. It waits politely until the player knocks (presses start), then lets them into the game.",
+  mistakes:[
+    "Starting the action before the player presses start.",
+    "Forgetting to tell the player which key starts the game.",
+    "Only checking the start key while already 'playing' — check it on the title screen."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to begin your quest. The title screen hands you into the game.",
+    starter:'let gameState = "title";\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === " " && gameState === "title") gameState = "playing";\n});\n\nfunction loop() {\n  if (gameState === "title") {\n    ctx.fillStyle = "#141a2a"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#ffe14d"; ctx.font = "22px monospace"; ctx.fillText("CODE QUEST", 78, 130);\n    ctx.fillStyle = "#9fd0ff"; ctx.font = "13px monospace"; ctx.fillText("The Grand Quest", 100, 156);\n    ctx.fillStyle = "#fff"; ctx.font = "13px monospace"; ctx.fillText("Press SPACE to start", 84, 220);\n  } else {\n    ctx.fillStyle = "#2e5d34"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#fff"; ctx.font = "16px monospace"; ctx.fillText("Your quest begins!", 60, 150);\n  }\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE to start.");'
+  },
+  summary:"A title screen is the \"title\" state: draw the game's name and a 'press start' hint, and when the start key is pressed, switch gameState to \"playing\"."
+},
+{
+  id:"meet-boss",
+  title:"Meet the Boss",
+  sub:"A bigger enemy",
+  lesson:
+    "<p>Every great quest ends with a <b>boss</b> — a giant enemy. Ours is the <b>King Slime</b>! A "+
+    "boss is an object just like the slimes, but <b>bigger</b> and with way more health:</p>"+
+    "<pre><code>let boss = {\n  x: 130, y: 110,\n  size: 44,        // much bigger than a slime\n  health: 12,      // takes many hits\n  maxHealth: 12\n};</code></pre>"+
+    "<p>We draw the boss from a bigger sprite at a larger scale so it looms over the hero. Same "+
+    "<code>drawSprite</code> you've always used — just a grander picture.</p>",
+  model:"A boss is a super-sized enemy object: same idea as a slime, but bigger, tougher, and drawn larger so it feels dangerous.",
+  mistakes:[
+    "Giving the boss the same tiny health as a slime — a boss should take many hits.",
+    "Drawing the boss at the same scale as a slime, so it doesn't feel big.",
+    "Forgetting the boss is still just an object with x, y, size, and health."
+  ],
+  exercise:{
+    intro:"Run it to meet the King Slime! Try changing the <code>8</code> in <code>drawSprite</code> to make the boss even bigger or smaller.",
+    starter:'const kingSlimeSprite = ["...kkkkkk...","..kyyyyyyk..",".kggggggggk.","kggggggggggk","kgkkggggkkgk","kggggggggggk","kgggkkkkgggk","kggggggggggk",".kgGGGGGGgk.","..kGGGGGGk..","...kkkkkk..."];\n\nlet boss = { x: 60, y: 70, size: 96, health: 12, maxHealth: 12 };\n\nctx.fillStyle = "#3a2a4a";\nctx.fillRect(0, 0, 320, 320);\ndrawSprite(kingSlimeSprite, boss.x, boss.y, 8, PALETTE);\n\nctx.fillStyle = "#ffe14d"; ctx.font = "16px monospace";\nctx.fillText("The King Slime!", 80, 300);\nconsole.log("The boss has " + boss.health + " health — much tougher than a slime.");'
+  },
+  summary:"A boss is a big, tough enemy object (large size, high health) drawn from a bigger sprite at a larger scale. Otherwise it's the same object idea as a slime."
+},
+{
+  id:"boss-health",
+  title:"The Boss Health Bar",
+  sub:"Showing the boss's health",
+  lesson:
+    "<p>A boss fight needs drama — you have to <i>see</i> the boss weakening. We draw a big "+
+    "<b>health bar</b> that shrinks as the boss takes hits. It's the same fraction trick as the XP "+
+    "bar:</p>"+
+    "<pre><code>const fraction = boss.health / boss.maxHealth;\nctx.fillStyle = \"#e23b3b\";\nctx.fillRect(20, 20, 280 * fraction, 16);   // shrinks as health drops</code></pre>"+
+    "<p>Full health means <code>fraction</code> is 1 (full-width bar). Half health means 0.5 (half "+
+    "bar). Every hit makes the red shrink — a countdown to victory the player can watch.</p>",
+  model:"The boss health bar is a melting ice block: every hit shaves a slice off, and when it's gone, the boss falls.",
+  mistakes:[
+    "Letting the bar go negative when health drops below 0 — stop it at 0.",
+    "Using a fixed width instead of <code>maxWidth * fraction</code>, so it never shrinks.",
+    "Forgetting to redraw the bar after each hit."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to strike the boss. Watch its health bar shrink. Keep hitting until it's DEFEATED!",
+    starter:'const kingSlimeSprite = ["...kkkkkk...","..kyyyyyyk..",".kggggggggk.","kggggggggggk","kgkkggggkkgk","kggggggggggk","kgggkkkkgggk","kggggggggggk",".kgGGGGGGgk.","..kGGGGGGk..","...kkkkkk..."];\nlet boss = { x: 112, y: 120, size: 48, health: 12, maxHealth: 12 };\nlet actionCooldown = 0;\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === " " && actionCooldown <= 0 && boss.health > 0) {\n    boss.health = boss.health - 2;\n    if (boss.health < 0) boss.health = 0;\n    actionCooldown = 12;\n  }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  ctx.fillStyle = "#3a2a4a"; ctx.fillRect(0, 0, 320, 320);\n\n  let fraction = boss.health / boss.maxHealth;\n  if (fraction < 0) fraction = 0;\n  ctx.fillStyle = "#4a2020"; ctx.fillRect(20, 20, 280, 16);\n  ctx.fillStyle = "#e23b3b"; ctx.fillRect(20, 20, 280 * fraction, 16);\n  ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 2; ctx.strokeRect(20, 20, 280, 16);\n\n  drawSprite(kingSlimeSprite, boss.x, boss.y, 4, PALETTE);\n  ctx.fillStyle = "#fff"; ctx.font = "13px monospace";\n  ctx.fillText(boss.health > 0 ? "Boss health: " + boss.health + "  (SPACE to hit)" : "DEFEATED!", 60, 300);\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE to strike the boss.");'
+  },
+  summary:"Draw a boss health bar as maxWidth * (boss.health / boss.maxHealth). It shrinks with every hit, giving the player a countdown to victory."
+},
+{
+  id:"attack-patterns",
+  title:"The Boss Fights Back",
+  sub:"Attack patterns",
+  lesson:
+    "<p>A boss that only chases is boring. Great bosses switch between <b>moves</b> — an "+W("attack pattern","a repeating routine a boss follows, like chase for a while, then charge")+". "+
+    "We give the boss a <code>mode</code> and a timer that switches it:</p>"+
+    "<pre><code>boss.modeTimer = boss.modeTimer - frameScale;\nif (boss.modeTimer <= 0) {\n  if (boss.mode === \"chase\") { boss.mode = \"charge\"; boss.modeTimer = 60; }\n  else { boss.mode = \"chase\"; boss.modeTimer = 150; }\n}</code></pre>"+
+    "<p>In <code>\"chase\"</code> it creeps toward you; in <code>\"charge\"</code> it dashes fast. "+
+    "The timer is a "+W("state machine","code that switches between a few named modes on a schedule")+" — the boss's little brain, cycling through its moves.</p>",
+  model:"A boss's brain is a spinning wheel of moves. A timer turns the wheel; whichever move it lands on decides how the boss acts right now.",
+  mistakes:[
+    "Never resetting the timer, so the boss picks one mode forever.",
+    "Making 'charge' so fast it's impossible to dodge — keep it fair.",
+    "Forgetting to multiply the boss's speed by <code>frameScale</code>."
+  ],
+  exercise:{
+    intro:"Run it and watch the King Slime hunt the gold hero. It <b>chases</b> slowly, then <b>charges</b> fast, over and over. The label shows its current move.",
+    starter:'const kingSlimeSprite = ["...kkkkkk...","..kyyyyyyk..",".kggggggggk.","kggggggggggk","kgkkggggkkgk","kggggggggggk","kgggkkkkgggk","kggggggggggk",".kgGGGGGGgk.","..kGGGGGGk..","...kkkkkk..."];\nlet hero = { x: 150, y: 240 };\nlet boss = { x: 130, y: 40, size: 48, mode: "chase", modeTimer: 150 };\n\nlet previousTime = 0;\nfunction loop(currentTime) {\n  let frameScale = 1;\n  if (previousTime) frameScale = (currentTime - previousTime) / (1000 / 60);\n  if (frameScale > 4) frameScale = 4;\n  previousTime = currentTime;\n\n  boss.modeTimer = boss.modeTimer - frameScale;\n  if (boss.modeTimer <= 0) {\n    if (boss.mode === "chase") { boss.mode = "charge"; boss.modeTimer = 60; }\n    else { boss.mode = "chase"; boss.modeTimer = 150; }\n  }\n  const bossSpeed = boss.mode === "charge" ? 1.4 : 0.4;\n  if (boss.x < hero.x) boss.x = boss.x + bossSpeed * frameScale;\n  if (boss.x > hero.x) boss.x = boss.x - bossSpeed * frameScale;\n  if (boss.y < hero.y) boss.y = boss.y + bossSpeed * frameScale;\n  if (boss.y > hero.y) boss.y = boss.y - bossSpeed * frameScale;\n\n  ctx.fillStyle = "#3a2a4a"; ctx.fillRect(0, 0, 320, 320);\n  drawSprite(kingSlimeSprite, boss.x, boss.y, 4, PALETTE);\n  ctx.fillStyle = "#ffd700"; ctx.fillRect(hero.x, hero.y, 22, 22);\n  ctx.fillStyle = "#fff"; ctx.font = "14px monospace";\n  ctx.fillText("Boss move: " + boss.mode.toUpperCase(), 80, 20);\n  requestAnimationFrame(loop);\n}\nrequestAnimationFrame(loop);\nconsole.log("Watch the boss switch between CHASE and CHARGE.");'
+  },
+  summary:"Give the boss a mode and a modeTimer that switches it (chase → charge → chase). Each mode acts differently — a simple state machine that makes the boss feel alive."
+},
+{
+  id:"win-lose",
+  title:"Victory & Defeat",
+  sub:"Win and lose states",
+  lesson:
+    "<p>A boss fight needs stakes: beat the boss to <b>win</b>, run out of hearts to <b>lose</b>. We "+
+    "watch both health bars and flip <code>gameState</code> when one hits zero:</p>"+
+    "<pre><code>if (boss.health <= 0) gameState = \"victory\";\nif (heroHealth <= 0) gameState = \"gameover\";</code></pre>"+
+    "<p>Once the state changes, the loop stops updating the fight and shows the ending screen "+
+    "instead. Those two little checks are the difference between a demo and a real game with a "+
+    "beginning, middle, and end.</p>",
+  model:"Win and lose are finish lines. The loop watches both health bars; whoever hits zero first ends the game on that screen.",
+  mistakes:[
+    "Checking only one health bar — you need both win and lose.",
+    "Still moving the hero after the game ended — stop updating once the state changes.",
+    "Forgetting to tell the player how to play again."
+  ],
+  exercise:{
+    intro:"Run it, click the screen. Press <b>A</b> to attack the boss and <b>H</b> to take a hit. Beat the boss to WIN, or lose all hearts to get GAME OVER. Then press SPACE to restart.",
+    starter:'let gameState = "playing";\nlet bossHealth = 6;\nlet heroHealth = 3;\nlet actionCooldown = 0;\n\nwindow.addEventListener("keydown", function(event) {\n  if (actionCooldown > 0) return;\n  if (gameState === "playing") {\n    if (event.key === "a" || event.key === "A") { bossHealth = bossHealth - 1; actionCooldown = 10; }\n    if (event.key === "h" || event.key === "H") { heroHealth = heroHealth - 1; actionCooldown = 10; }\n    if (bossHealth <= 0) gameState = "victory";\n    if (heroHealth <= 0) gameState = "gameover";\n  } else if (event.key === " ") {\n    bossHealth = 6; heroHealth = 3; gameState = "playing"; actionCooldown = 12;\n  }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  ctx.fillStyle = "#2a2a3a"; ctx.fillRect(0, 0, 320, 320);\n  if (gameState === "playing") {\n    ctx.fillStyle = "#fff"; ctx.font = "14px monospace";\n    ctx.fillText("Boss health: " + bossHealth, 20, 120);\n    ctx.fillText("Your hearts: " + heroHealth, 20, 160);\n    ctx.fillText("A = attack boss,  H = take a hit", 20, 220);\n  } else if (gameState === "victory") {\n    ctx.fillStyle = "#7cffb0"; ctx.font = "24px monospace"; ctx.fillText("VICTORY!", 90, 150);\n    ctx.fillStyle = "#fff"; ctx.font = "13px monospace"; ctx.fillText("Press SPACE to play again", 60, 200);\n  } else {\n    ctx.fillStyle = "#ff6b6b"; ctx.font = "24px monospace"; ctx.fillText("GAME OVER", 75, 150);\n    ctx.fillStyle = "#fff"; ctx.font = "13px monospace"; ctx.fillText("Press SPACE to try again", 62, 200);\n  }\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen. A = attack boss, H = take a hit.");'
+  },
+  summary:"Watch both health bars: boss.health <= 0 sets gameState to \"victory\", heroHealth <= 0 sets \"gameover\". The ending screen then shows and offers a restart."
+},
+{
+  id:"restart",
+  title:"Play Again",
+  sub:"Restarting the game",
+  lesson:
+    "<p>When the game ends, players want another go. <b>Restarting</b> just means putting every "+
+    "value back to its starting point in one function:</p>"+
+    "<pre><code>function resetGame() {\n  heroHealth = 3;\n  score = 0;\n  gameState = \"playing\";\n}</code></pre>"+
+    "<p>Call <code>resetGame()</code> when the player presses start on the game-over screen, and the "+
+    "whole adventure begins fresh. Keeping the reset in one tidy function means you never forget to "+
+    "put something back.</p>",
+  model:"Restarting is tidying the board to play again: one function sweeps every score, health, and flag back to its start value.",
+  mistakes:[
+    "Forgetting to reset one value, so a bit of the old game leaks into the new one.",
+    "Resetting the score but not the game state, so the ending screen never leaves.",
+    "Scattering the resets everywhere instead of one <code>resetGame()</code> function."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to collect points. At 5 points you WIN — then press SPACE to reset everything and play again from zero.",
+    starter:'let score = 0;\nlet gameState = "playing";\nlet actionCooldown = 0;\n\nfunction resetGame() {\n  score = 0;\n  gameState = "playing";\n}\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key !== " " || actionCooldown > 0) return;\n  actionCooldown = 10;\n  if (gameState === "playing") {\n    score = score + 1;\n    if (score >= 5) gameState = "victory";\n  } else {\n    resetGame();\n  }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  ctx.fillStyle = "#1c2e2a"; ctx.fillRect(0, 0, 320, 320);\n  if (gameState === "playing") {\n    ctx.fillStyle = "#fff"; ctx.font = "18px monospace"; ctx.fillText("Score: " + score, 110, 140);\n    ctx.font = "13px monospace"; ctx.fillText("SPACE to score (need 5)", 70, 190);\n  } else {\n    ctx.fillStyle = "#7cffb0"; ctx.font = "22px monospace"; ctx.fillText("YOU WIN!", 100, 140);\n    ctx.fillStyle = "#fff"; ctx.font = "13px monospace"; ctx.fillText("SPACE to reset & play again", 50, 190);\n  }\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE.");'
+  },
+  summary:"Put every starting value back in one resetGame() function, then call it when the player restarts. Tidy resets mean no leftovers from the last game."
+},
+{
+  id:"screen-shake",
+  title:"Feel the Hit",
+  sub:"Screen shake (polish)",
+  lesson:
+    "<p>Now for <b>polish</b> — the little touches that make a game feel juicy. <b>Screen shake</b> "+
+    "makes hits feel powerful. When something big happens, we jiggle the whole picture for a few "+
+    "frames by shifting where everything draws:</p>"+
+    "<pre><code>if (shakeTimer > 0) {\n  ctx.save();\n  ctx.translate((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);\n}\n// ...draw the game...\nif (shakeTimer > 0) ctx.restore();</code></pre>"+
+    "<p><code>ctx.translate</code> nudges the whole drawing by a small random amount each frame; "+
+    "<code>save</code> and <code>restore</code> put it back so the shake doesn't drift away. Set "+
+    "<code>shakeTimer</code> when you get hit, and count it down.</p>",
+  model:"Screen shake is a flinch. For a few frames the camera trembles a little, so a hit lands with a jolt instead of a shrug.",
+  mistakes:[
+    "Shaking forever — count <code>shakeTimer</code> down so it stops.",
+    "Forgetting <code>ctx.restore()</code>, so the whole game slides off screen.",
+    "Shaking so hard it's dizzying — a few pixels is plenty."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to take a hit. The whole screen shakes for a moment — feel the impact!",
+    starter:'let shakeTimer = 0;\nlet actionCooldown = 0;\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === " " && actionCooldown <= 0) { shakeTimer = 18; actionCooldown = 20; }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  if (shakeTimer > 0) shakeTimer = shakeTimer - 1;\n\n  ctx.save();\n  if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);\n  ctx.fillStyle = "#2e5d34"; ctx.fillRect(0, 0, 320, 320);\n  ctx.fillStyle = "#ffd700"; ctx.fillRect(140, 140, 40, 40);\n  ctx.fillStyle = "#fff"; ctx.font = "14px monospace"; ctx.fillText("SPACE to shake!", 90, 260);\n  ctx.restore();\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE to feel the hit.");'
+  },
+  summary:"Screen shake nudges the whole drawing by a small random amount for a few frames (ctx.save/translate/restore), triggered by a shakeTimer you set on a hit and count down."
+},
+{
+  id:"particles",
+  title:"Sparkles!",
+  sub:"Particle effects (polish)",
+  lesson:
+    "<p>More polish: <b>particles</b> — little sparks that burst out when something is defeated. Each "+
+    "spark is a tiny object with a position and a "+W("velocity","how fast and which way something is moving, as a change in x and y")+", "+
+    "and they all live in an array:</p>"+
+    "<pre><code>particles.push({ x: 100, y: 100, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 30 });</code></pre>"+
+    "<p>Each frame we move every spark by its velocity, shrink its <code>life</code>, and remove it "+
+    "when its life runs out (looping backward to splice, from Level 2!). Arrays + loops making magic "+
+    "again.</p>",
+  model:"Particles are confetti. Toss a handful, each flies its own way and fades; when a piece's life hits zero, it's swept up.",
+  mistakes:[
+    "Never removing dead particles, so they pile up forever and slow the game.",
+    "Looping forward while splicing — loop backward when removing (Level 2!).",
+    "Giving every spark the same velocity, so they don't spread out."
+  ],
+  exercise:{
+    intro:"Run it, click the screen, and press <b>SPACE</b> to burst a shower of sparkles. Each spark flies its own way and fades out.",
+    starter:'let particles = [];\nlet actionCooldown = 0;\n\nfunction burst(x, y) {\n  for (let i = 0; i < 24; i++) {\n    particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 30, color: i % 2 === 0 ? "#ffe14d" : "#7cffb0" });\n  }\n}\n\nwindow.addEventListener("keydown", function(event) {\n  if (event.key === " " && actionCooldown <= 0) { burst(160, 160); actionCooldown = 14; }\n});\n\nfunction loop() {\n  if (actionCooldown > 0) actionCooldown = actionCooldown - 1;\n  for (let i = particles.length - 1; i >= 0; i--) {\n    const spark = particles[i];\n    spark.x = spark.x + spark.vx;\n    spark.y = spark.y + spark.vy;\n    spark.life = spark.life - 1;\n    if (spark.life <= 0) particles.splice(i, 1);\n  }\n  ctx.fillStyle = "#1c2530"; ctx.fillRect(0, 0, 320, 320);\n  for (let i = 0; i < particles.length; i++) {\n    ctx.fillStyle = particles[i].color;\n    ctx.fillRect(particles[i].x, particles[i].y, 4, 4);\n  }\n  ctx.fillStyle = "#fff"; ctx.font = "14px monospace"; ctx.fillText("SPACE for sparkles!", 80, 300);\n  requestAnimationFrame(loop);\n}\nloop();\nconsole.log("Click the screen, then press SPACE for sparkles.");'
+  },
+  summary:"Particles are an array of tiny objects with a velocity and a life. Each frame: move them, shrink life, and splice out the dead ones (loop backward). Burst some on a defeat for polish."
+},
+{
+  id:"final-1",
+  title:"Final Quest · Step 1",
+  sub:"The boss battle",
+  isFinal:true,
+  lesson:
+    "<p>&#127894; <b>The Final Quest of Level 5 begins!</b> First we build the <b>boss battle</b> on "+
+    "its own: the King Slime with attack patterns and a health bar, your sword, hearts, a victory "+
+    "and a game-over screen, plus <b>screen shake</b> and <b>sparkles</b> for polish.</p>"+
+    "<p><b>Step 1: the boss battle.</b> Everything from this level in one arena — game states, the "+
+    "boss's chase-and-charge pattern, win/lose, restart, and juicy polish. Beat the King Slime to "+
+    "win; lose your hearts and try again.</p>",
+  model:"A boss battle is a whole tiny game: a title-less arena with one big enemy, two health bars, an ending, and polish that makes every hit feel great.",
+  mistakes:[
+    "Forgetting the hurt cooldown, so the charging boss drains all your hearts at once.",
+    "Not stopping updates after the game ends — freeze the fight on the ending screen.",
+    "Skipping the polish — shake and sparkles are what make a boss fight feel epic."
+  ],
+  exercise:{
+    intro:"THE BOSS BATTLE. Run it, click the screen, arrows to move, SPACE to swing your sword. Dodge the charge, chip down the King Slime's health bar, and win! Lose all hearts and press SPACE to retry.",
+    starter:'const heroDown  = ["..kkkk..",".knnnnk.",".kssssk.",".kskksk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];\nconst heroUp    = ["..kkkk..",".knnnnk.",".knnnnk.",".knnnnk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];\nconst heroLeft  = ["..kkkk..",".knnnnk.","kkssssk.","kskssk..","kkssssk.","kgggggk.","kgggggk.",".kn.nk.."];\nconst heroRight = ["..kkkk..",".knnnnk.",".ksssskk","..kssksk",".ksssskk",".kgggggk",".kgggggk","..kn.nk."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\nconst kingSlimeSprite = ["...kkkkkk...","..kyyyyyyk..",".kggggggggk.","kggggggggggk","kgkkggggkkgk","kggggggggggk","kgggkkkkgggk","kggggggggggk",".kgGGGGGGgk.","..kGGGGGGk..","...kkkkkk..."];\nconst TILE = 32;\n\nlet gameState = "playing";\nlet hero, boss, heroHealth, maxHealth, hurtCooldown, attackTimer, shakeTimer, particles, keysHeld;\n\nfunction resetGame() {\n  hero = { x: 150, y: 250, size: 24, speed: 2, facing: "up" };\n  boss = { x: 130, y: 40, size: 44, health: 14, maxHealth: 14, mode: "chase", modeTimer: 150 };\n  heroHealth = 4; maxHealth = 4; hurtCooldown = 0; attackTimer = 0; shakeTimer = 0;\n  particles = []; keysHeld = {};\n  gameState = "playing";\n}\nresetGame();\n\nwindow.addEventListener("keyup", function(event) { keysHeld[event.key] = false; });\nwindow.addEventListener("keydown", function(event) {\n  keysHeld[event.key] = true;\n  if (event.key === " ") {\n    if (gameState === "playing" && attackTimer <= 0) { swingSword(); attackTimer = 12; }\n    else if (gameState !== "playing") resetGame();\n  }\n});\n\nfunction box(t) { return { x: t.x, y: t.y, width: t.size, height: t.size }; }\nfunction isTouching(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }\n\nfunction burst(x, y, color) {\n  for (let i = 0; i < 16; i++) particles.push({ x: x, y: y, vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6, life: 26, color: color });\n}\n\nfunction getSwordHitbox() {\n  const REACH = 24;\n  if (hero.facing === "right") return { x: hero.x + hero.size, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "left")  return { x: hero.x - REACH, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "up")    return { x: hero.x, y: hero.y - REACH, width: hero.size, height: REACH };\n  return { x: hero.x, y: hero.y + hero.size, width: hero.size, height: REACH };\n}\n\nfunction swingSword() {\n  if (isTouching(getSwordHitbox(), box(boss))) {\n    boss.health = boss.health - 1;\n    burst(boss.x + boss.size / 2, boss.y + boss.size / 2, "#ffe14d");\n    if (boss.health <= 0) { gameState = "victory"; burst(160, 120, "#7cffb0"); }\n  }\n}\n\nfunction moveHero(frameScale) {\n  if (keysHeld["ArrowLeft"])  { hero.x = hero.x - hero.speed * frameScale; hero.facing = "left"; }\n  if (keysHeld["ArrowRight"]) { hero.x = hero.x + hero.speed * frameScale; hero.facing = "right"; }\n  if (keysHeld["ArrowUp"])    { hero.y = hero.y - hero.speed * frameScale; hero.facing = "up"; }\n  if (keysHeld["ArrowDown"])  { hero.y = hero.y + hero.speed * frameScale; hero.facing = "down"; }\n  if (hero.x < TILE) hero.x = TILE;\n  if (hero.x + hero.size > 320 - TILE) hero.x = 320 - TILE - hero.size;\n  if (hero.y < TILE) hero.y = TILE;\n  if (hero.y + hero.size > 320 - TILE) hero.y = 320 - TILE - hero.size;\n}\n\nfunction updateBoss(frameScale) {\n  boss.modeTimer = boss.modeTimer - frameScale;\n  if (boss.modeTimer <= 0) {\n    if (boss.mode === "chase") { boss.mode = "charge"; boss.modeTimer = 55; }\n    else { boss.mode = "chase"; boss.modeTimer = 150; }\n  }\n  const bossSpeed = boss.mode === "charge" ? 1.5 : 0.45;\n  if (boss.x < hero.x) boss.x = boss.x + bossSpeed * frameScale;\n  if (boss.x > hero.x) boss.x = boss.x - bossSpeed * frameScale;\n  if (boss.y < hero.y) boss.y = boss.y + bossSpeed * frameScale;\n  if (boss.y > hero.y) boss.y = boss.y - bossSpeed * frameScale;\n\n  if (hurtCooldown > 0) hurtCooldown = hurtCooldown - frameScale;\n  if (hurtCooldown <= 0 && isTouching(box(hero), box(boss))) {\n    heroHealth = heroHealth - 0.5; hurtCooldown = 60; shakeTimer = 16;\n    if (heroHealth <= 0) { heroHealth = 0; gameState = "gameover"; }\n  }\n}\n\nfunction updateParticles(frameScale) {\n  for (let i = particles.length - 1; i >= 0; i--) {\n    const spark = particles[i];\n    spark.x = spark.x + spark.vx * frameScale; spark.y = spark.y + spark.vy * frameScale;\n    spark.life = spark.life - frameScale;\n    if (spark.life <= 0) particles.splice(i, 1);\n  }\n}\n\nfunction drawHearts() {\n  for (let heartIndex = 0; heartIndex < maxHealth; heartIndex++) {\n    const heartX = 8 + heartIndex * 20;\n    let heartFill = heroHealth - heartIndex;\n    if (heartFill > 1) heartFill = 1;\n    if (heartFill < 0) heartFill = 0;\n    ctx.fillStyle = "#3a1a1a"; ctx.fillRect(heartX, 300, 16, 16);\n    ctx.fillStyle = "#e23b3b"; ctx.fillRect(heartX, 300 + 16 * (1 - heartFill), 16, 16 * heartFill);\n    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 1; ctx.strokeRect(heartX, 300, 16, 16);\n  }\n}\n\nlet previousTime = 0;\nfunction gameLoop(currentTime) {\n  let frameScale = 1;\n  if (previousTime) frameScale = (currentTime - previousTime) / (1000 / 60);\n  if (frameScale > 4) frameScale = 4;\n  previousTime = currentTime;\n\n  if (gameState === "playing") {\n    moveHero(frameScale);\n    updateBoss(frameScale);\n    if (attackTimer > 0) attackTimer = attackTimer - frameScale;\n    if (shakeTimer > 0) shakeTimer = shakeTimer - frameScale;\n  }\n  updateParticles(frameScale);\n\n  ctx.save();\n  if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9);\n  ctx.fillStyle = "#3a2a4a"; ctx.fillRect(0, 0, 320, 320);\n\n  let fraction = boss.health / boss.maxHealth;\n  if (fraction < 0) fraction = 0;\n  ctx.fillStyle = "#4a2020"; ctx.fillRect(20, 12, 280, 14);\n  ctx.fillStyle = "#e23b3b"; ctx.fillRect(20, 12, 280 * fraction, 14);\n  ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 2; ctx.strokeRect(20, 12, 280, 14);\n  ctx.fillStyle = "#fff"; ctx.font = "11px monospace"; ctx.fillText("KING SLIME", 128, 23);\n\n  drawSprite(kingSlimeSprite, boss.x, boss.y, 4, PALETTE);\n  if (attackTimer > 0) { const sword = getSwordHitbox(); ctx.fillStyle = "#e8e8e8"; ctx.fillRect(sword.x, sword.y, sword.width, sword.height); }\n  drawSprite(heroSprites[hero.facing], hero.x, hero.y, 3, PALETTE);\n  for (let i = 0; i < particles.length; i++) { ctx.fillStyle = particles[i].color; ctx.fillRect(particles[i].x, particles[i].y, 4, 4); }\n  drawHearts();\n  ctx.restore();\n\n  if (gameState === "victory") {\n    ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(0, 120, 320, 80);\n    ctx.fillStyle = "#7cffb0"; ctx.font = "24px monospace"; ctx.fillText("VICTORY!", 95, 160);\n    ctx.fillStyle = "#fff"; ctx.font = "12px monospace"; ctx.fillText("Press SPACE to play again", 62, 185);\n  } else if (gameState === "gameover") {\n    ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(0, 120, 320, 80);\n    ctx.fillStyle = "#ff6b6b"; ctx.font = "24px monospace"; ctx.fillText("GAME OVER", 80, 160);\n    ctx.fillStyle = "#fff"; ctx.font = "12px monospace"; ctx.fillText("Press SPACE to try again", 64, 185);\n  }\n  requestAnimationFrame(gameLoop);\n}\nrequestAnimationFrame(gameLoop);\nconsole.log("Click the screen. Arrows move, SPACE swings. Beat the King Slime!");'
+  },
+  summary:"The boss battle is a whole mini-game: game states, the boss's chase/charge pattern, two health bars, win/lose with restart, and polish (screen shake + particle bursts) — everything Level 5 teaches, in one arena."
+},
+{
+  id:"final-2",
+  title:"Final Quest · Step 2",
+  sub:"The Grand Quest",
+  isFinal:true,
+  lesson:
+    "<p><b>Step 2: THE GRAND QUEST.</b> This is it — the whole adventure, every level joined into one "+
+    "game. A <b>title screen</b>, a <b>three-floor dungeon</b> to descend, <b>slimes</b> to fight and "+
+    "<b>chests</b> to loot, <b>XP and leveling</b> to grow strong, and the <b>King Slime boss</b> "+
+    "waiting at the bottom. Beat the boss to win the whole quest.</p>"+
+    "<p>Everything you have learned across five levels lives here: sprites, objects, arrays, loops, "+
+    "functions, events, the game loop, collision, combat, items, leveling, multi-floor navigation, "+
+    "game states, a boss, and polish. You didn't just learn to code — <b>you built a game.</b></p>"+
+    "<p><b>Your mission:</b> press start, descend the dungeon, grow strong, and defeat the King "+
+    "Slime. Then make it yours — new floors, new enemies, a tougher boss. The quest is yours now!</p>",
+  model:"The finished game is every system you built, stacked together: states wrap the game, floors hold the world, combat and leveling drive the middle, and the boss is the finish line.",
+  mistakes:[
+    "Forgetting to level up on the way down — rush the boss underpowered and it's very hard.",
+    "Storing the boss globally instead of on the bottom floor, so it appears everywhere.",
+    "Not rebuilding the world on restart, so a replay starts already half-cleared."
+  ],
+  exercise:{
+    intro:"THE GRAND QUEST. Press SPACE to start. Arrows move, SPACE swings your sword. Descend all three floors (grey stairs), fight slimes and loot chests to level up, then defeat the King Slime on the bottom floor to win the whole adventure!",
+    starter:'const heroDown  = ["..kkkk..",".knnnnk.",".kssssk.",".kskksk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];\nconst heroUp    = ["..kkkk..",".knnnnk.",".knnnnk.",".knnnnk.",".kssssk.","kggggggk","kggggggk",".kn..nk."];\nconst heroLeft  = ["..kkkk..",".knnnnk.","kkssssk.","kskssk..","kkssssk.","kgggggk.","kgggggk.",".kn.nk.."];\nconst heroRight = ["..kkkk..",".knnnnk.",".ksssskk","..kssksk",".ksssskk",".kgggggk",".kgggggk","..kn.nk."];\nconst heroSprites = { down: heroDown, up: heroUp, left: heroLeft, right: heroRight };\nconst slimeSprite = ["..kkkk..",".kggggk.","kggggggk","kgkggkgk","kggggggk",".kkkkkk."];\nconst kingSlimeSprite = ["...kkkkkk...","..kyyyyyyk..",".kggggggggk.","kggggggggggk","kgkkggggkkgk","kggggggggggk","kgggkkkkgggk","kggggggggggk",".kgGGGGGGgk.","..kGGGGGGk..","...kkkkkk..."];\nconst chestClosedSprite = [".kkkkkk.",".knnnnk.",".kyyyyk.",".knnnnk.",".knyynk.",".knnnnk.",".kkkkkk."];\nconst chestOpenSprite   = ["kk......",".kk.....",".kyyyyk.",".kyyyyk.",".knnnnk.",".knnnnk.",".kkkkkk."];\nconst doorSprite        = ["..kkkk..",".knnnnk.",".knnnnk.",".knnnnk.",".knynnk.",".knnnnk.",".knnnnk.",".kkkkkk."];\nconst downStairsSprite  = ["kkkkkkkk","keeeeeek","kekkkkek","kek..kek","kek..kek","kekkkkek","keeeeeek","kkkkkkkk"];\nconst TILE = 32;\n\nconst F0 = [[1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,2,0,0,0,1],[1,1,1,1,1,1,1,1,1,1]];\nconst F1 = [[1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,3,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,2,0,0,0,1],[1,1,1,1,1,1,1,1,1,1]];\nconst F2 = [[1,1,1,1,1,1,1,1,1,1],[1,0,0,0,0,3,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1]];\n\nlet gameState = "title";\nlet floors, currentFloor, hero, heroHealth, maxHealth, attackPower, level, experience, experienceToNext, rupees;\nlet hurtCooldown, attackTimer, transitionCooldown, shakeTimer, particles, keysHeld, message;\n\nfunction makeFloors() {\n  return [\n    { map: F0, floorColor: "#4c9a2a", wallColor: "#5b3a1a", entryFromAbove: {col:5,row:2}, entryFromBelow: {col:5,row:7},\n      enemies: [ {x:80,y:90,size:22,speed:0.3,wander:0.6,health:2}, {x:230,y:200,size:22,speed:0.3,wander:0.6,health:2} ],\n      chest: {x:64,y:64,size:24,opened:false}, boss: null },\n    { map: F1, floorColor: "#5a7a6a", wallColor: "#3a3a4a", entryFromAbove: {col:5,row:2}, entryFromBelow: {col:5,row:7},\n      enemies: [ {x:70,y:200,size:22,speed:0.34,wander:0.6,health:2}, {x:230,y:120,size:22,speed:0.34,wander:0.7,health:3} ],\n      chest: {x:230,y:230,size:24,opened:false}, boss: null },\n    { map: F2, floorColor: "#5a3a5a", wallColor: "#2a2a3a", entryFromAbove: {col:5,row:2}, entryFromBelow: {col:5,row:7},\n      enemies: [], chest: {x:64,y:230,size:24,opened:false},\n      boss: {x:130,y:110,size:44,health:16,maxHealth:16,mode:"chase",modeTimer:150} }\n  ];\n}\n\nfunction resetGame() {\n  floors = makeFloors(); currentFloor = 0;\n  hero = { x: 150, y: 120, size: 24, speed: 2, facing: "down" };\n  heroHealth = 4; maxHealth = 4; attackPower = 1; level = 1; experience = 0; experienceToNext = 24; rupees = 0;\n  hurtCooldown = 0; attackTimer = 0; transitionCooldown = 0; shakeTimer = 0; particles = []; keysHeld = {};\n  message = "Descend and defeat the King Slime!";\n  gameState = "playing";\n}\n\nwindow.addEventListener("keyup", function(event) { if (keysHeld) keysHeld[event.key] = false; });\nwindow.addEventListener("keydown", function(event) {\n  if (gameState !== "playing") { if (event.key === " ") resetGame(); return; }\n  keysHeld[event.key] = true;\n  if (event.key === " " && attackTimer <= 0) { swingSword(); attackTimer = 12; }\n});\n\nfunction getFloor() { return floors[currentFloor]; }\nfunction box(t) { return { x: t.x, y: t.y, width: t.size, height: t.size }; }\nfunction isTouching(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }\nfunction burst(x, y, color) { for (let i = 0; i < 14; i++) particles.push({ x:x, y:y, vx:(Math.random()-0.5)*6, vy:(Math.random()-0.5)*6, life:26, color:color }); }\n\nfunction addExperience(amount) {\n  experience = experience + amount;\n  while (experience >= experienceToNext) {\n    experience = experience - experienceToNext;\n    level = level + 1; maxHealth = maxHealth + 1; attackPower = attackPower + 1; heroHealth = maxHealth;\n    experienceToNext = level * 18;\n    message = "LEVEL UP! You are level " + level;\n  }\n}\n\nfunction getSwordHitbox() {\n  const REACH = 24;\n  if (hero.facing === "right") return { x: hero.x + hero.size, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "left")  return { x: hero.x - REACH, y: hero.y, width: REACH, height: hero.size };\n  if (hero.facing === "up")    return { x: hero.x, y: hero.y - REACH, width: hero.size, height: REACH };\n  return { x: hero.x, y: hero.y + hero.size, width: hero.size, height: REACH };\n}\n\nfunction swingSword() {\n  const sword = getSwordHitbox();\n  const enemies = getFloor().enemies;\n  for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {\n    if (isTouching(sword, box(enemies[enemyIndex]))) {\n      enemies[enemyIndex].health = enemies[enemyIndex].health - attackPower;\n      if (enemies[enemyIndex].health <= 0) { burst(enemies[enemyIndex].x, enemies[enemyIndex].y, "#ffe14d"); enemies.splice(enemyIndex, 1); rupees = rupees + 5; addExperience(12); }\n    }\n  }\n  const boss = getFloor().boss;\n  if (boss && isTouching(sword, box(boss))) {\n    boss.health = boss.health - attackPower;\n    burst(boss.x + boss.size / 2, boss.y + boss.size / 2, "#ffe14d");\n    if (boss.health <= 0) { getFloor().boss = null; gameState = "victory"; burst(160, 120, "#7cffb0"); }\n  }\n}\n\nfunction moveHero(frameScale) {\n  if (keysHeld["ArrowLeft"])  { hero.x = hero.x - hero.speed * frameScale; hero.facing = "left"; }\n  if (keysHeld["ArrowRight"]) { hero.x = hero.x + hero.speed * frameScale; hero.facing = "right"; }\n  if (keysHeld["ArrowUp"])    { hero.y = hero.y - hero.speed * frameScale; hero.facing = "up"; }\n  if (keysHeld["ArrowDown"])  { hero.y = hero.y + hero.speed * frameScale; hero.facing = "down"; }\n  if (hero.x < TILE) hero.x = TILE;\n  if (hero.x + hero.size > 320 - TILE) hero.x = 320 - TILE - hero.size;\n  if (hero.y < TILE) hero.y = TILE;\n  if (hero.y + hero.size > 320 - TILE) hero.y = 320 - TILE - hero.size;\n}\n\nfunction moveEnemies(frameScale) {\n  const enemies = getFloor().enemies;\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) {\n    const enemy = enemies[enemyIndex];\n    if (enemy.x < hero.x) enemy.x = enemy.x + enemy.speed * frameScale;\n    if (enemy.x > hero.x) enemy.x = enemy.x - enemy.speed * frameScale;\n    if (enemy.y < hero.y) enemy.y = enemy.y + enemy.speed * frameScale;\n    if (enemy.y > hero.y) enemy.y = enemy.y - enemy.speed * frameScale;\n    enemy.x = enemy.x + (Math.random() - 0.5) * enemy.wander * frameScale;\n    enemy.y = enemy.y + (Math.random() - 0.5) * enemy.wander * frameScale;\n  }\n}\n\nfunction updateBoss(frameScale) {\n  const boss = getFloor().boss;\n  if (!boss) return;\n  boss.modeTimer = boss.modeTimer - frameScale;\n  if (boss.modeTimer <= 0) {\n    if (boss.mode === "chase") { boss.mode = "charge"; boss.modeTimer = 55; }\n    else { boss.mode = "chase"; boss.modeTimer = 150; }\n  }\n  const bossSpeed = boss.mode === "charge" ? 1.4 : 0.45;\n  if (boss.x < hero.x) boss.x = boss.x + bossSpeed * frameScale;\n  if (boss.x > hero.x) boss.x = boss.x - bossSpeed * frameScale;\n  if (boss.y < hero.y) boss.y = boss.y + bossSpeed * frameScale;\n  if (boss.y > hero.y) boss.y = boss.y - bossSpeed * frameScale;\n}\n\nfunction checkHurt(frameScale) {\n  if (hurtCooldown > 0) hurtCooldown = hurtCooldown - frameScale;\n  const floor = getFloor();\n  let hit = false;\n  for (let enemyIndex = 0; enemyIndex < floor.enemies.length; enemyIndex++) {\n    if (hurtCooldown <= 0 && isTouching(box(hero), box(floor.enemies[enemyIndex]))) { heroHealth = heroHealth - 0.25; hit = true; }\n  }\n  if (floor.boss && hurtCooldown <= 0 && isTouching(box(hero), box(floor.boss))) { heroHealth = heroHealth - 0.5; hit = true; }\n  if (hit) { hurtCooldown = 60; shakeTimer = 14; if (heroHealth <= 0) { heroHealth = 0; gameState = "gameover"; } }\n}\n\nfunction openChest() {\n  const chest = getFloor().chest;\n  if (!chest.opened && isTouching(box(hero), box(chest))) { chest.opened = true; rupees = rupees + 5; heroHealth = maxHealth; message = "Chest! +5 rupees, full heal"; }\n}\n\nfunction checkStairs(frameScale) {\n  if (transitionCooldown > 0) { transitionCooldown = transitionCooldown - frameScale; return; }\n  const heroCol = Math.floor((hero.x + hero.size / 2) / TILE);\n  const heroRow = Math.floor((hero.y + hero.size / 2) / TILE);\n  const tile = getFloor().map[heroRow][heroCol];\n  if (tile === 2 && currentFloor < floors.length - 1) {\n    currentFloor = currentFloor + 1; const e = getFloor().entryFromAbove; hero.x = e.col * TILE; hero.y = e.row * TILE;\n    transitionCooldown = 20; message = currentFloor === floors.length - 1 ? "The King Slime awaits!" : "Descended to floor " + (currentFloor + 1);\n  } else if (tile === 3 && currentFloor > 0) {\n    currentFloor = currentFloor - 1; const e = getFloor().entryFromBelow; hero.x = e.col * TILE; hero.y = e.row * TILE;\n    transitionCooldown = 20; message = "Climbed to floor " + (currentFloor + 1);\n  }\n}\n\nfunction updateParticles(frameScale) {\n  for (let i = particles.length - 1; i >= 0; i--) {\n    const spark = particles[i];\n    spark.x = spark.x + spark.vx * frameScale; spark.y = spark.y + spark.vy * frameScale; spark.life = spark.life - frameScale;\n    if (spark.life <= 0) particles.splice(i, 1);\n  }\n}\n\nfunction drawFloor() {\n  const floor = getFloor();\n  for (let row = 0; row < floor.map.length; row++)\n    for (let col = 0; col < floor.map[row].length; col++) {\n      const tile = floor.map[row][col];\n      ctx.fillStyle = tile === 1 ? floor.wallColor : floor.floorColor;\n      ctx.fillRect(col * TILE, row * TILE, TILE, TILE);\n      if (tile === 2) drawSprite(downStairsSprite, col * TILE, row * TILE, 4, PALETTE);\n      if (tile === 3) drawSprite(doorSprite, col * TILE, row * TILE, 4, PALETTE);\n    }\n}\n\nfunction drawHud() {\n  for (let heartIndex = 0; heartIndex < maxHealth; heartIndex++) {\n    const heartX = 8 + heartIndex * 18;\n    let heartFill = heroHealth - heartIndex;\n    if (heartFill > 1) heartFill = 1;\n    if (heartFill < 0) heartFill = 0;\n    ctx.fillStyle = "#3a1a1a"; ctx.fillRect(heartX, 6, 14, 14);\n    ctx.fillStyle = "#e23b3b"; ctx.fillRect(heartX, 6 + 14 * (1 - heartFill), 14, 14 * heartFill);\n    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 1; ctx.strokeRect(heartX, 6, 14, 14);\n  }\n  ctx.fillStyle = "#fff"; ctx.font = "11px monospace";\n  ctx.fillText("Lv " + level + "  Atk " + attackPower + "  Rupees " + rupees, 8, 34);\n  ctx.fillText(message, 8, 314);\n  const boss = getFloor().boss;\n  if (boss) {\n    let f = boss.health / boss.maxHealth; if (f < 0) f = 0;\n    ctx.fillStyle = "#4a2020"; ctx.fillRect(90, 40, 150, 10);\n    ctx.fillStyle = "#e23b3b"; ctx.fillRect(90, 40, 150 * f, 10);\n    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 1; ctx.strokeRect(90, 40, 150, 10);\n    ctx.fillStyle = "#fff"; ctx.fillText("KING SLIME", 130, 62);\n  }\n  for (let f = 0; f < floors.length; f++) {\n    ctx.fillStyle = f === currentFloor ? "#ffe14d" : "#204020";\n    ctx.fillRect(298, 6 + f * 16, 12, 12);\n    ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 1; ctx.strokeRect(298, 6 + f * 16, 12, 12);\n  }\n}\n\nlet previousTime = 0;\nfunction gameLoop(currentTime) {\n  let frameScale = 1;\n  if (previousTime) frameScale = (currentTime - previousTime) / (1000 / 60);\n  if (frameScale > 4) frameScale = 4;\n  previousTime = currentTime;\n\n  if (gameState === "title") {\n    ctx.fillStyle = "#141a2a"; ctx.fillRect(0, 0, 320, 320);\n    ctx.fillStyle = "#ffe14d"; ctx.font = "22px monospace"; ctx.fillText("CODE QUEST", 78, 120);\n    ctx.fillStyle = "#9fd0ff"; ctx.font = "14px monospace"; ctx.fillText("The Grand Quest", 96, 150);\n    ctx.fillStyle = "#fff"; ctx.font = "13px monospace"; ctx.fillText("Press SPACE to start", 84, 210);\n    ctx.fillText("Arrows move  -  SPACE swings", 56, 240);\n    requestAnimationFrame(gameLoop); return;\n  }\n\n  if (gameState === "playing") {\n    moveHero(frameScale); moveEnemies(frameScale); updateBoss(frameScale);\n    checkHurt(frameScale); openChest(); checkStairs(frameScale);\n    if (attackTimer > 0) attackTimer = attackTimer - frameScale;\n    if (shakeTimer > 0) shakeTimer = shakeTimer - frameScale;\n  }\n  updateParticles(frameScale);\n\n  ctx.save();\n  if (shakeTimer > 0) ctx.translate((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9);\n  drawFloor();\n  const chest = getFloor().chest;\n  drawSprite(chest.opened ? chestOpenSprite : chestClosedSprite, chest.x, chest.y, 3, PALETTE);\n  const enemies = getFloor().enemies;\n  for (let enemyIndex = 0; enemyIndex < enemies.length; enemyIndex++) drawSprite(slimeSprite, enemies[enemyIndex].x, enemies[enemyIndex].y, 3, PALETTE);\n  const boss = getFloor().boss;\n  if (boss) drawSprite(kingSlimeSprite, boss.x, boss.y, 4, PALETTE);\n  if (attackTimer > 0) { const sword = getSwordHitbox(); ctx.fillStyle = "#e8e8e8"; ctx.fillRect(sword.x, sword.y, sword.width, sword.height); }\n  drawSprite(heroSprites[hero.facing], hero.x, hero.y, 3, PALETTE);\n  for (let i = 0; i < particles.length; i++) { ctx.fillStyle = particles[i].color; ctx.fillRect(particles[i].x, particles[i].y, 4, 4); }\n  ctx.restore();\n\n  drawHud();\n\n  if (gameState === "victory") {\n    ctx.fillStyle = "rgba(0,0,0,.65)"; ctx.fillRect(0, 110, 320, 100);\n    ctx.fillStyle = "#7cffb0"; ctx.font = "22px monospace"; ctx.fillText("QUEST COMPLETE!", 40, 150);\n    ctx.fillStyle = "#ffe14d"; ctx.font = "13px monospace"; ctx.fillText("You beat the King Slime!", 66, 176);\n    ctx.fillStyle = "#fff"; ctx.fillText("Press SPACE to play again", 62, 198);\n  } else if (gameState === "gameover") {\n    ctx.fillStyle = "rgba(0,0,0,.65)"; ctx.fillRect(0, 120, 320, 80);\n    ctx.fillStyle = "#ff6b6b"; ctx.font = "22px monospace"; ctx.fillText("GAME OVER", 82, 158);\n    ctx.fillStyle = "#fff"; ctx.font = "12px monospace"; ctx.fillText("Press SPACE to try again", 64, 184);\n  }\n  requestAnimationFrame(gameLoop);\n}\nrequestAnimationFrame(gameLoop);\nconsole.log("Click the screen, then press SPACE to start the Grand Quest!");'
+  },
+  summary:"The Grand Quest is the whole series in one game: a title screen, a 3-floor dungeon to descend, slimes and chests, XP and leveling, and the King Slime boss at the bottom — with game states, win/lose/restart, and polish. You built a complete game."
+}
+];
+
+/* ============================================================
+   State + storage
+   ============================================================ */
+const STORE_KEY = LEVEL.saveKey;
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return { completed:{}, current:TOPICS[0].id, code:{}, muted:false, heroName:"" };
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const questList = document.getElementById("questList");
+const scroll = document.getElementById("scroll");
+const heartsEl = document.getElementById("hearts");
+const barFill = document.getElementById("barFill");
+const pctText = document.getElementById("pctText");
+const rupeeCount = document.getElementById("rupeeCount");
+const editor = document.getElementById("editor");
+const stage = document.getElementById("stage");
+
+function completedCount(){
+  return TOPICS.filter(t => state.completed[t.id]).length;
+}
+
+function renderMap(){
+  questList.innerHTML = "";
+  TOPICS.forEach((t, i) => {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const done = !!state.completed[t.id];
+    const active = state.current === t.id;
+    btn.className = (done?"done ":"") + (active?"active":"");
+    btn.setAttribute("aria-current", active ? "true" : "false");
+    btn.innerHTML =
+      '<span class="dot">'+(done ? '&#10003;' : (i+1))+'</span>'+
+      '<span class="ttl">'+t.sub+'</span>'+
+      (done ? '<span class="check" aria-label="completed">&#9733;</span>' : '');
+    btn.addEventListener("click", () => { goTo(t.id); });
+    li.appendChild(btn);
+    questList.appendChild(li);
+  });
+}
+
+function renderMeter(){
+  const total = TOPICS.length;
+  const done = completedCount();
+  const pct = Math.round((done/total)*100);
+  barFill.style.width = pct + "%";
+  pctText.textContent = pct + "%";
+  rupeeCount.textContent = done;
+  // hearts: one heart per topic, filled if completed
+  heartsEl.innerHTML = "";
+  TOPICS.forEach((t) => {
+    const filled = !!state.completed[t.id];
+    heartsEl.insertAdjacentHTML("beforeend", heartSVG(filled));
+  });
+}
+
+function heartSVG(filled){
+  const color = filled ? "#e23b3b" : "#5a3a3a";
+  const stroke = filled ? "#8e1b1b" : "#3a2020";
+  return '<svg width="16" height="15" viewBox="0 0 16 15" aria-hidden="true">'+
+    '<path d="M8 14S1 9.5 1 4.8C1 2.7 2.7 1 4.8 1 6 1 7.2 1.6 8 2.7 8.8 1.6 10 1 11.2 1 13.3 1 15 2.7 15 4.8 15 9.5 8 14 8 14z" '+
+    'fill="'+color+'" stroke="'+stroke+'" stroke-width="1"/></svg>';
+}
+
+function renderTopic(){
+  const t = TOPICS.find(x => x.id === state.current) || TOPICS[0];
+  const idx = TOPICS.indexOf(t);
+  const done = !!state.completed[t.id];
+
+  let html = "";
+  html += '<span class="eyebrow">'+(t.isFinal ? 'Final Quest' : ('Dungeon '+(idx+1)+' of '+TOPICS.length))+'</span>';
+  html += '<h1>'+t.title+'</h1>';
+  html += '<p class="tag">'+t.sub+'</p>';
+
+  html += '<div class="section lesson"><h3>'+bookIcon()+'The Lesson</h3>'+t.lesson+'</div>';
+
+  html += '<div class="section model"><h3>'+brainIcon()+'Mental Model</h3><p>'+t.model+'</p></div>';
+
+  html += '<div class="section mistakes"><h3>'+warnIcon()+'Watch Out! Common Mistakes</h3><ul>';
+  t.mistakes.forEach(m => { html += '<li>'+m+'</li>'; });
+  html += '</ul></div>';
+
+  html += '<div class="section exercise"><h3>'+swordIcon()+'Your Quest (Exercise)</h3><p>'+t.exercise.intro+'</p>'+
+          '<button class="btn btn-green try-btn" id="loadExerciseBtn" type="button">Load this quest into the Workshop &darr;</button></div>';
+
+  html += '<div class="section summary"><h3>'+scrollIcon()+'Quick Recap</h3><p>'+t.summary+'</p></div>';
+
+  // complete row
+  html += '<div class="complete-row '+(done?'done':'')+'">'+
+            '<p>'+(done ? '&#9733; Quest cleared! A heart is yours.' : 'Finished this dungeon? Claim your heart!')+'</p>'+
+            '<button class="btn '+(done?'btn-ghost':'btn-gold')+'" id="completeBtn" type="button">'+
+              (done ? 'Mark as not done' : 'Mark complete &#10003;')+
+            '</button>'+
+          '</div>';
+
+  // footer nav
+  html += '<div class="foot-nav">';
+  html += idx>0 ? '<button class="btn btn-ghost" id="prevBtn" type="button">&larr; Previous</button>' : '<span></span>';
+  html += idx<TOPICS.length-1 ? '<button class="btn btn-gold" id="nextBtn" type="button">Next dungeon &rarr;</button>' : '<span></span>';
+  html += '</div>';
+
+  scroll.innerHTML = html;
+
+  // wire buttons
+  document.getElementById("completeBtn").addEventListener("click", toggleComplete);
+  const lx = document.getElementById("loadExerciseBtn");
+  if(lx) lx.addEventListener("click", () => { setEditor(t.exercise.starter); runCode(); toast("Quest loaded! Press Run ▶"); scrollToWorkshop(); });
+  const pb = document.getElementById("prevBtn"); if(pb) pb.addEventListener("click", () => goTo(TOPICS[idx-1].id));
+  const nb = document.getElementById("nextBtn"); if(nb) nb.addEventListener("click", () => goTo(TOPICS[idx+1].id));
+
+  // load saved code for this topic (or the starter)
+  const saved = state.code[t.id];
+  setEditor(typeof saved === "string" ? saved : t.exercise.starter);
+
+  wireWords();
+  scroll.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* small inline icons (SVG, no emojis in UI chrome) */
+function bookIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h6v14H3z" fill="#7a5a2a"/><path d="M11 3h6v14h-6z" fill="#9a7238"/><path d="M9 3h2v14H9z" fill="#5b4526"/></svg>';}
+function brainIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="#3aa0d6"/><path d="M10 5v10M6 8h8M6 12h8" stroke="#fff" stroke-width="1.4"/></svg>';}
+function warnIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l8 15H2z" fill="#e23b3b"/><path d="M10 8v4M10 14v.5" stroke="#fff" stroke-width="1.8"/></svg>';}
+function swordIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M14 2l4 4-7 7-2-2z" fill="#c9ced6"/><path d="M4 14l3 3-2 1-2-2z" fill="#8a5a2a"/></svg>';}
+function scrollIcon(){return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="3" width="12" height="14" rx="2" fill="#e6b422"/><path d="M6 6h8M6 9h8M6 12h6" stroke="#5b4526" stroke-width="1.2"/></svg>';}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+function goTo(id){
+  state.current = id;
+  saveState();
+  renderMap();
+  renderTopic();
+}
+
+function toggleComplete(){
+  const id = state.current;
+  const wasDone = !!state.completed[id];
+  if(wasDone){ delete state.completed[id]; }
+  else { state.completed[id] = true; }
+  saveState();
+  renderMap();
+  renderMeter();
+  renderTopic();
+  if(!wasDone){
+    const n = completedCount();
+    if(n === TOPICS.length){
+      toast("🏆 ALL DUNGEONS CLEARED! You are a true game-maker!");
+      playSound("complete");
+      setTimeout(() => openCertificate(true), 650);
+    } else {
+      toast("New skill unlocked! +1 heart, +1 rupee");
+      playSound("complete");
+    }
+  }
+}
+
+function setEditor(code){ editor.value = code; }
+
+function scrollToWorkshop(){
+  document.querySelector(".pg").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ---------- The sandboxed playground ---------- */
+function runCode(){
+  const code = editor.value;
+  // save this code for the current topic
+  state.code[state.current] = code;
+  saveState();
+
+  const head =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+
+    'html,body{margin:0;padding:8px;background:#0f2410;color:#e8ffd0;'+
+    'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow:hidden;box-sizing:border-box;}'+
+    '#stageC{width:384px;height:384px;max-width:100%;background:#1c2530;display:block;margin:0 auto 8px;border:3px solid #d4af37;'+
+    'border-radius:4px;image-rendering:pixelated;outline:none;}'+
+    '#out{max-height:110px;overflow:auto;}'+'#out div{white-space:pre-wrap;line-height:1.5;padding:1px 0;}'+
+    '.ok{color:#d9f7b0;} .err{color:#ff9b9b;font-weight:bold;} .info{color:#9fd0ff;}'+
+    '</style></head><body>'+
+    '<canvas id="stageC" width="320" height="320" tabindex="0"></canvas>'+
+    '<div id="out"></div><script>(function(){'+
+    'var out=document.getElementById("out");'+
+    'var canvas=document.getElementById("stageC");'+
+    'var ctx=canvas.getContext("2d");'+
+    'canvas.focus();'+'window.addEventListener("keydown",function(ev){if([" ","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(ev.key)>=0)ev.preventDefault();},false);'+
+    'function show(cls,args){var d=document.createElement("div");d.className=cls;'+
+    'd.textContent=args.map(function(a){if(a&&typeof a==="object"){try{return JSON.stringify(a);}catch(e){return String(a);}}return String(a);}).join(" ");'+
+    'out.appendChild(d);}'+
+    'console.log=function(){show("ok",[].slice.call(arguments));};'+
+    'console.info=function(){show("info",[].slice.call(arguments));};'+
+    'console.warn=function(){show("info",[].slice.call(arguments));};'+
+    'console.error=function(){show("err",[].slice.call(arguments));};'+
+    'function friendly(m){m=String(m);'+
+    'if(/is not defined/.test(m))return m+"  (maybe a typo, or you forgot to make that variable?)";'+
+    'if(/unexpected|Unexpected/.test(m))return m+"  (check for a missing ) } or a stray character)";'+
+    'if(/cannot read|Cannot read/.test(m))return m+"  (you tried to use something that is empty)";'+
+    'return m;}'+
+    'window.onerror=function(msg,src,line){show("err",["Oops! "+friendly(msg)+(line?("  [line "+line+"]"):"")]);return true;};';
+
+  // Shared sprite helpers available to every exercise (see template/sprites.md)
+  const helpers =
+    'var PALETTE={".":null," ":null,"k":"#1a1a1a","w":"#ffffff","s":"#f2c79a","g":"#3aa63a","G":"#1f6d1f","b":"#3a6ea6","y":"#ffd23f","r":"#d63a3a","n":"#8a5a2a","e":"#e8e8e8","p":"#9a4ecf"};' +
+    'function drawSprite(sprite,screenX,screenY,pixelSize,palette){palette=palette||PALETTE;for(var rowIndex=0;rowIndex<sprite.length;rowIndex++){var row=sprite[rowIndex];for(var colIndex=0;colIndex<row.length;colIndex++){var color=palette[row[colIndex]];if(!color)continue;ctx.fillStyle=color;ctx.fillRect(screenX+colIndex*pixelSize,screenY+rowIndex*pixelSize,pixelSize,pixelSize);}}}';
+
+  const tail = '\n})();<\/scr'+'ipt></body></html>';
+
+  // wrap the user code in a try so runtime errors are friendly
+  const userWrapped = 'try{\n' + code + '\n}catch(e){show("err",["Oops! "+friendly(e.message)]);}';
+
+  stage.srcdoc = head + helpers + userWrapped + tail;
+}
+
+/* ---------- Hard-word tooltips ---------- */
+const tip = document.getElementById("tip");
+function wireWords(){
+  scroll.querySelectorAll(".word").forEach(el => {
+    el.setAttribute("tabindex","0");
+    el.setAttribute("role","button");
+    el.setAttribute("aria-label", el.textContent + ": " + el.getAttribute("data-tip"));
+    el.addEventListener("mouseenter", showTip);
+    el.addEventListener("mousemove", moveTip);
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("focus", showTip);
+    el.addEventListener("blur", hideTip);
+  });
+}
+function showTip(e){
+  const t = e.currentTarget.getAttribute("data-tip");
+  tip.textContent = t;
+  tip.style.display = "block";
+  positionTip(e);
+}
+function moveTip(e){ positionTip(e); }
+function positionTip(e){
+  const pad = 14;
+  let x, y;
+  const r = e.currentTarget.getBoundingClientRect();
+  if(e.clientX){ x = e.clientX + pad; y = e.clientY + pad; }
+  else { x = r.left; y = r.bottom + 6; }
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  if(x + w > window.innerWidth - 8) x = window.innerWidth - w - 8;
+  if(y + h > window.innerHeight - 8) y = r.top - h - 6;
+  tip.style.left = Math.max(8,x) + "px";
+  tip.style.top = Math.max(8,y) + "px";
+}
+function hideTip(){ tip.style.display = "none"; }
+
+/* ============================================================
+   Sound effects (Web Audio — offline, no files)
+   ============================================================ */
+let audioCtx = null;
+function ac(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  }
+  return audioCtx;
+}
+function tone(freq, start, dur, type, vol){
+  const c = ac(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type || "square";
+  o.frequency.value = freq;
+  o.connect(g); g.connect(c.destination);
+  const t0 = c.currentTime + start;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol || 0.18, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.start(t0); o.stop(t0 + dur + 0.03);
+}
+function playSound(name){
+  if(state.muted) return;
+  const c = ac(); if(!c) return;
+  if(c.state === "suspended"){ try{ c.resume(); }catch(e){} }
+  if(name === "complete"){
+    // bright little "secret found" pickup
+    [[659.25,0],[783.99,0.09],[987.77,0.18],[1318.51,0.28]].forEach(n => tone(n[0], n[1], 0.19, "square", 0.16));
+  } else if(name === "win"){
+    // triumphant fanfare for the certificate
+    [[523.25,0],[659.25,0.12],[783.99,0.24],[1046.5,0.38],[783.99,0.52],[1046.5,0.64],[1318.51,0.82]]
+      .forEach(n => tone(n[0], n[1], 0.24, "square", 0.2));
+    [[130.81,0],[196,0.38],[261.63,0.64]].forEach(n => tone(n[0], n[1], 0.4, "triangle", 0.14)); // bass
+  } else if(name === "click"){
+    tone(880, 0, 0.06, "square", 0.1);
+  }
+}
+
+/* Mute toggle */
+const muteIcon = document.getElementById("muteIcon");
+const muteLabel = document.getElementById("muteLabel");
+const muteBtn = document.getElementById("muteBtn");
+function speakerSVG(on){
+  return on
+    ? '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5c1.5 1.2 1.5 4.8 0 6M13 3c3 2.5 3 7.5 0 10" stroke="#fff" stroke-width="1.4" fill="none"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10L5 10H2z" fill="#fff"/><path d="M11 5l4 6M15 5l-4 6" stroke="#ff9b9b" stroke-width="1.6"/></svg>';
+}
+function renderMute(){
+  const on = !state.muted;
+  muteIcon.innerHTML = speakerSVG(on);
+  muteLabel.textContent = on ? "Sound on" : "Muted";
+  muteBtn.setAttribute("aria-pressed", state.muted ? "true" : "false");
+}
+muteBtn.addEventListener("click", () => {
+  state.muted = !state.muted;
+  saveState();
+  renderMute();
+  if(!state.muted) playSound("click");
+});
+
+/* ============================================================
+   Certificate of Completion
+   ============================================================ */
+const certModal = document.getElementById("certModal");
+const heroNameInput = document.getElementById("heroNameInput");
+const certDate = document.getElementById("certDate");
+const certHearts = document.getElementById("certHearts");
+
+function allDone(){ return completedCount() === TOPICS.length; }
+
+function openCertificate(celebrate){
+  heroNameInput.value = state.heroName || "";
+  certDate.textContent = new Date().toLocaleDateString(undefined, {year:"numeric", month:"long", day:"numeric"});
+  certHearts.textContent = completedCount() + " / " + TOPICS.length;
+  document.getElementById("certBody").innerHTML = LEVEL.certBody;
+  certModal.classList.add("show");
+  if(celebrate){
+    playSound("win");
+    confetti();
+  }
+  if(!state.heroName){ setTimeout(() => heroNameInput.focus(), 200); }
+}
+function closeCertificate(){ certModal.classList.remove("show"); }
+
+heroNameInput.addEventListener("input", () => {
+  state.heroName = heroNameInput.value;
+  saveState();
+});
+document.getElementById("certClose").addEventListener("click", closeCertificate);
+document.getElementById("certCloseBtn").addEventListener("click", closeCertificate);
+document.getElementById("certPrint").addEventListener("click", () => window.print());
+document.getElementById("certReplay").addEventListener("click", () => { playSound("win"); confetti(); });
+certModal.addEventListener("click", (e) => { if(e.target === certModal) closeCertificate(); });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape" && certModal.classList.contains("show")) closeCertificate(); });
+
+document.getElementById("trophyBtn").addEventListener("click", () => {
+  if(allDone()){ openCertificate(false); }
+  else {
+    const left = TOPICS.length - completedCount();
+    toast("Clear " + left + " more dungeon" + (left===1?"":"s") + " to earn your certificate!");
+  }
+});
+
+/* Confetti burst (respects reduced-motion via CSS) */
+function confetti(){
+  const colors = ["#e6b422","#37b34a","#e23b3b","#3aa0d6","#ffe14d"];
+  for(let i=0;i<70;i++){
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.background = colors[i % colors.length];
+    c.style.left = Math.random()*100 + "vw";
+    const dur = 2.2 + Math.random()*1.8;
+    const rot = (Math.random()*720-360);
+    c.style.transform = "rotate("+(Math.random()*360)+"deg)";
+    document.body.appendChild(c);
+    c.animate(
+      [{ transform:"translateY(-10px) rotate(0deg)", opacity:1 },
+       { transform:"translateY(100vh) rotate("+rot+"deg)", opacity:1 },
+       { transform:"translateY(102vh) rotate("+rot+"deg)", opacity:0 }],
+      { duration: dur*1000, easing:"cubic-bezier(.3,.6,.6,1)" }
+    ).onfinish = () => c.remove();
+  }
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ============================================================
+   Wire top-level controls
+   ============================================================ */
+document.getElementById("runBtn").addEventListener("click", () => { playSound("click"); runCode(); });
+document.getElementById("loadExample").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  runCode();
+  toast("Example loaded & running!");
+});
+document.getElementById("resetCode").addEventListener("click", () => {
+  const t = TOPICS.find(x => x.id === state.current);
+  setEditor(t.exercise.starter);
+  delete state.code[t.id];
+  saveState();
+  toast("Code reset to the starter.");
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if(confirm("Start a brand-new game? This erases all your hearts, rupees, and saved code.")){
+    state = { completed:{}, current:TOPICS[0].id, code:{}, muted:state.muted, heroName:state.heroName };
+    saveState();
+    closeCertificate();
+    renderAll();
+    toast("New game started. Good luck, hero!");
+  }
+});
+
+// Tab inserts spaces in the editor instead of leaving the box
+editor.addEventListener("keydown", function(e){
+  if(e.key === "Tab"){
+    e.preventDefault();
+    const s = this.selectionStart, en = this.selectionEnd;
+    this.value = this.value.slice(0,s) + "  " + this.value.slice(en);
+    this.selectionStart = this.selectionEnd = s + 2;
+  }
+});
+// autosave editor as you type (debounced)
+let saveTimer;
+editor.addEventListener("input", function(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { state.code[state.current] = editor.value; saveState(); }, 400);
+});
+
+/* ============================================================
+   Boot
+   ============================================================ */
+function renderAll(){
+  renderMap();
+  renderMeter();
+  renderTopic();
+  renderMute();
+}
+renderAll();
+// draw the current topic's code once so the workshop isn't empty
+runCode();
+</script>
+</body>
+</html>
